@@ -1,0 +1,21 @@
+[package]
+name = "svm-cli"
+version.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+license.workspace = true
+edition.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+svm-executor = { workspace = true }
+solana-sdk = { workspace = true }
+solana-svm = { workspace = true }
+
+clap = { workspace = true, features = ["derive", "env"] }
+env_logger = { workspace = true }
+log = { workspace = true }
+anyhow = { workspace = true }
+hex = { workspace = true }

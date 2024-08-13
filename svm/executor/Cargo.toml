@@ -1,0 +1,26 @@
+[package]
+name = "svm-executor"
+version.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+license.workspace = true
+edition.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+thiserror = { workspace = true }
+bincode = { workspace = true }
+
+solana-svm = { workspace = true }
+solana-sdk = { workspace = true, features = ["dev-context-only-utils"] }
+solana-program-runtime = { workspace = true }
+solana-bpf-loader-program = { workspace = true }
+solana-system-program = { workspace = true }
+solana-compute-budget = { workspace = true }
+solana-runtime = { workspace = true, features = ["dev-context-only-utils"] }
+solana-ledger = { workspace = true }
+
+[features]
+__test = []
