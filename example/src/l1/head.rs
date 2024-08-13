@@ -2,6 +2,7 @@ use rollups_interface::l1::L1Head;
 
 use super::{L1Hash, L1Height, L1Timestamp};
 
+#[derive(Debug, Clone)]
 pub struct L1HeadImpl {
     pub hash: L1Hash,
     pub height: L1Height,

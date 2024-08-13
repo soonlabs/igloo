@@ -1322,8 +1322,13 @@ name = "example"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "chrono",
+ "env_logger",
+ "log",
+ "rand 0.8.5",
  "rollups-interface",
  "solana-sdk",
+ "tokio",
 ]
 
 [[package]]
@@ -3209,7 +3214,6 @@ name = "rollups-interface"
 version = "0.1.0"
 dependencies = [
  "bincode",
- "solana-sdk",
  "thiserror",
 ]
 

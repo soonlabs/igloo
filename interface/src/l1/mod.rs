@@ -38,5 +38,5 @@ pub trait L1BlockInfo<P: PayloadAttribute>: TryInto<P> {
 
     fn deposit_transactions(&self) -> &[Self::DepositTx];
 
-    fn batch_info(&self) -> &Self::Batch;
+    fn batch_info(&self) -> Option<&Self::Batch>;
 }

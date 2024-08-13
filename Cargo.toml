@@ -22,6 +22,9 @@ log = "0.4.20"
 anyhow = "1.0.79"
 hex = "0.4.3"
 clap = "4.5"
+tokio = "1.37"
+chrono = "0.4.24"
+rand = "0.8.5"
 
 solana-bpf-loader-program = { git = "https://github.com/anza-xyz/agave.git", rev = "57a09f19f989228f1cfb195203cc60ea0120dd08" }
 solana-compute-budget = { git = "https://github.com/anza-xyz/agave.git", rev = "57a09f19f989228f1cfb195203cc60ea0120dd08" }

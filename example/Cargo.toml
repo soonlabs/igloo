@@ -11,3 +11,8 @@ edition.workspace = true
 rollups-interface = { workspace = true }
 solana-sdk = { workspace = true }
 anyhow = { workspace = true }
+log = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
+chrono = { workspace = true }
+rand = { workspace = true }
+env_logger = { workspace = true }

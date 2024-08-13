@@ -57,3 +57,14 @@ impl PayloadAttribute for PayloadAttributeImpl {
         &self.epoch
     }
 }
+
+impl TryFrom<L1HeadImpl> for PayloadAttributeImpl {
+    type Error = anyhow::Error;
+
+    fn try_from(value: L1HeadImpl) -> Result<Self, Self::Error> {
+        Ok(Self {
+            transactions: Default::default(),
+            epoch: value.try_into()?,
+        })
+    }
+}

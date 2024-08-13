@@ -3,6 +3,7 @@ use solana_sdk::pubkey::Pubkey;
 
 use crate::l1::tx::DepositTx;
 
+#[derive(Clone, Debug)]
 pub struct L2Transaction {
     pub from: Pubkey,
     pub to: Pubkey,

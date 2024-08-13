@@ -1,4 +1,3 @@
-use crate::error::Result;
 use crate::l1::PayloadAttribute;
 
 pub mod pool;
@@ -27,32 +26,49 @@ pub trait L2Head {
 
 pub trait Entry {}
 
-pub trait BlockPayload<P: PayloadAttribute>: TryFrom<P> {
+pub trait Producer {
+    type Attribute: PayloadAttribute;
+    type BlockPayload: BlockPayload;
+    type Error;
+
+    async fn produce(&self, attribute: Self::Attribute) -> Result<Self::BlockPayload, Self::Error>;
+}
+
+pub trait BlockPayload {
     type Entry: Entry;
 
     fn entries(&self) -> &[Self::Entry];
 }
 
-pub trait Engine: EngineApi<Self::Payload, Self::Attribute, Self::Head> {
-    type TransactionPool: pool::TransactionPool;
-    type Attribute: PayloadAttribute;
-    type Payload: BlockPayload<Self::Attribute>;
+pub trait Block {
     type Head: L2Head;
+
+    fn head(&self) -> &Self::Head;
+}
+
+pub trait Engine: EngineApi<Self::Block, Self::Head> {
+    type TransactionPool: pool::TransactionPool;
+    type Payload: BlockPayload;
+    type Head: L2Head;
+    type Block: Block<Head = Self::Head>;
     type BlockHeight: Copy;
 
     fn pool(&self) -> &Self::TransactionPool;
 
     fn pool_mut(&mut self) -> &mut Self::TransactionPool;
 
-    fn next_payload(&mut self) -> Result<Option<Self::Payload>>;
-
-    fn get_head(&mut self, height: Self::Head) -> Result<Option<Self::Head>>;
+    async fn get_head(
+        &mut self,
+        height: Self::BlockHeight,
+    ) -> Result<Option<Self::Head>, Self::Error>;
 }
 
-pub trait EngineApi<P: BlockPayload<A>, A: PayloadAttribute, H: L2Head> {
-    fn new_block(&mut self, payload: P) -> Result<H>;
+pub trait EngineApi<B: Block, H: L2Head> {
+    type Error;
 
-    fn reorg(&mut self, reset_to: H) -> Result<()>;
+    async fn new_block(&mut self, block: B) -> Result<H, Self::Error>;
 
-    fn finalize(&mut self, block: H) -> Result<()>;
+    async fn reorg(&mut self, reset_to: H) -> Result<(), Self::Error>;
+
+    async fn finalize(&mut self, block: H) -> Result<(), Self::Error>;
 }

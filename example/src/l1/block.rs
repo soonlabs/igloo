@@ -7,9 +7,9 @@ use crate::l2::tx::L2Transaction;
 use super::{attribute::PayloadAttributeImpl, batch, head::L1HeadImpl, tx};
 
 pub struct L1BlockInfoImpl {
-    deposit_txs: Vec<tx::DepositTx>,
-    batch: batch::Batch,
-    l1_head: L1HeadImpl,
+    pub deposit_txs: Vec<tx::DepositTx>,
+    pub batch: Option<batch::Batch>,
+    pub l1_head: L1HeadImpl,
 }
 
 impl L1BlockInfo<PayloadAttributeImpl> for L1BlockInfoImpl {
@@ -21,8 +21,8 @@ impl L1BlockInfo<PayloadAttributeImpl> for L1BlockInfoImpl {
         self.deposit_txs.as_slice()
     }
 
-    fn batch_info(&self) -> &Self::Batch {
-        &self.batch
+    fn batch_info(&self) -> Option<&Self::Batch> {
+        self.batch.as_ref()
     }
 
     fn l1_head(&self) -> &Self::L1Head {

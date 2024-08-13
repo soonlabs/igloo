@@ -1,3 +1,5 @@
+#![allow(async_fn_in_trait)]
+
 pub mod derive;
 pub mod error;
 pub mod l1;
