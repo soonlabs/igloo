@@ -7,6 +7,8 @@ RUST_LOG=example=info cargo run -p example
 
 or you can use `RUST_LOG=example=trace` to see more logs.
 
+To run a program with svm cli please ref to <a href="./svm/cli">cli readme</a>
+
 ## Directory Structure
 
 <pre>
