@@ -23,14 +23,15 @@ impl TransactionStream for TransactionStreamImpl {
     type TxIn = super::tx::L2Transaction;
     type TxOut = super::tx::L2Transaction;
     type Settings = SimpleBatchSettings;
+    type Error = anyhow::Error;
 
-    fn insert(&mut self, tx: Self::TxIn) -> rollups_interface::error::Result<()> {
+    async fn insert(&mut self, tx: Self::TxIn) -> anyhow::Result<()> {
         // if `Self::TxIn` and `Self::TxOut` are not the same type, we should convert here
         self.transactions.push(tx);
         Ok(())
     }
 
-    fn next_batch(&mut self, settings: Self::Settings) -> Vec<Self::TxOut> {
+    async fn next_batch(&mut self, settings: Self::Settings) -> Vec<Self::TxOut> {
         if self.transactions.len() >= settings.max_size() {
             self.transactions.drain(..settings.max_size()).collect()
         } else {

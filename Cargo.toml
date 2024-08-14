@@ -37,6 +37,7 @@ solana-test-validator = { git = "https://github.com/anza-xyz/agave.git", rev = "
 solana-ledger = { git = "https://github.com/anza-xyz/agave.git", rev = "57a09f19f989228f1cfb195203cc60ea0120dd08" }
 solana-runtime = { git = "https://github.com/anza-xyz/agave.git", rev = "57a09f19f989228f1cfb195203cc60ea0120dd08" }
 solana-entry = { git = "https://github.com/anza-xyz/agave.git", rev = "57a09f19f989228f1cfb195203cc60ea0120dd08" }
+solana-accounts-db = { git = "https://github.com/anza-xyz/agave.git", rev = "57a09f19f989228f1cfb195203cc60ea0120dd08" }
 
 rollups-interface = { path = "interface" }
 svm-executor = { path = "svm/executor" }

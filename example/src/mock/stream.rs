@@ -19,7 +19,7 @@ impl TxServer {
                 let mut stream = inner.write().await;
                 for _ in 0..tx_count {
                     let tx = Self::random_l2_tx();
-                    stream.insert(tx).expect("Failed to insert tx");
+                    stream.insert(tx).await.expect("Failed to insert tx");
                 }
                 drop(stream);
 

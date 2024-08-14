@@ -39,7 +39,7 @@ impl SvmEngine {
         let ledger = SharedLedger::default();
         Ok(Self {
             stream: Default::default(),
-            producer: SvmProducer::new(ledger.clone()),
+            producer: SvmProducer::new(&base_path.join("accountsdb"), ledger.clone())?,
             ledger,
             blockstore,
             attribute_sender,
@@ -51,7 +51,13 @@ impl SvmEngine {
         attribute: PayloadAttributeImpl,
     ) -> anyhow::Result<BlockPayloadImpl> {
         let mut transactions = (*attribute.transactions).clone();
-        let extra_txs = { self.stream.write().await.next_batch(Default::default()) };
+        let extra_txs = {
+            self.stream
+                .write()
+                .await
+                .next_batch(Default::default())
+                .await
+        };
         trace!(
             "produce block with {} deposit txs, {} normal txs",
             transactions.len(),

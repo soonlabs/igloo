@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use crate::l2;
 
+/// L2 epoch according to L1 block info.
 pub trait Epoch {
     type Hash;
     type BlockHeight;

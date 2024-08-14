@@ -12,7 +12,7 @@ impl InstantDerive for InstantDeriveImpl {
     type L1Info = L1BlockInfoImpl;
     type Error = anyhow::Error;
 
-    fn get_new_block(&mut self) -> anyhow::Result<Option<Self::L1Info>> {
+    async fn get_new_block(&mut self) -> anyhow::Result<Option<Self::L1Info>> {
         match self.receiver.try_recv() {
             Ok(info) => Ok(Some(info)),
             Err(err) => match err {

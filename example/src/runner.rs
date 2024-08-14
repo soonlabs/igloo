@@ -59,7 +59,7 @@ impl SimpleRunner {
     }
 
     async fn advance_unsafe(&mut self) -> Result<()> {
-        let info = self.instant_derive()?.get_new_block()?;
+        let info = self.instant_derive()?.get_new_block().await?;
         let block = if let Some(i) = info {
             self.current_head = Some(i.l1_head().clone());
             self.sequence_number = 0;

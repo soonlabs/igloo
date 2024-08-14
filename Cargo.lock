@@ -4771,6 +4771,7 @@ name = "svm-executor"
 version = "0.1.0"
 dependencies = [
  "bincode",
+ "solana-accounts-db",
  "solana-bpf-loader-program",
  "solana-compute-budget",
  "solana-ledger",

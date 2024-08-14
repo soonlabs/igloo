@@ -1,21 +1,27 @@
-use std::sync::{Arc, RwLock};
+use std::{
+    path::Path,
+    sync::{Arc, RwLock},
+};
 
-use solana_ledger::genesis_utils::{create_genesis_config, GenesisConfigInfo};
+use solana_accounts_db::utils::create_accounts_run_and_snapshot_dirs;
+use solana_ledger::genesis_utils::create_genesis_config;
 use solana_runtime::{
-    bank::Bank, bank_forks::BankForks, installed_scheduler_pool::BankWithScheduler,
+    bank::{Bank, BankTestConfig},
+    bank_forks::BankForks,
+    installed_scheduler_pool::BankWithScheduler,
 };
 use solana_sdk::{
     account::{AccountSharedData, WritableAccount},
     account_utils::StateMut,
     bpf_loader_upgradeable::{self, UpgradeableLoaderState},
     clock::Slot,
-    genesis_config::GenesisConfig,
     hash::{hashv, Hash},
     pubkey::Pubkey,
 };
 use solana_svm::transaction_processing_callback::TransactionProcessingCallback;
 
 use super::{BankInfo, BankOperations};
+use crate::error::Result;
 
 const PREVIOUS_SLOT: Slot = 20;
 const LATEST_SLOT: Slot = 30;
@@ -24,7 +30,6 @@ const LATEST_SLOT: Slot = 30;
 pub struct BankWrapper {
     bank: Arc<Bank>,
 
-    pub genesis_config: GenesisConfig,
     pub validator_pubkey: Pubkey,
 }
 
@@ -111,6 +116,12 @@ impl BankWrapper {
     pub fn new(pre_slot: Slot, last_slot: Slot, mint_lamports: u64) -> Self {
         let genesis = create_genesis_config(mint_lamports);
         let bank = Bank::new_for_tests(&genesis.genesis_config);
+        let mut wrap = Self::new_from_bank(bank, pre_slot, last_slot);
+        wrap.validator_pubkey = genesis.validator_pubkey;
+        wrap
+    }
+
+    pub fn new_from_bank(bank: Bank, pre_slot: Slot, last_slot: Slot) -> Self {
         let (bank, bank_forks) = bank.wrap_with_bank_forks_for_tests();
         goto_end_of_slot(bank.clone());
         let bank =
@@ -118,16 +129,37 @@ impl BankWrapper {
         let bank =
             new_bank_from_parent_with_bank_forks(&bank_forks, bank, &Pubkey::default(), last_slot);
 
-        let GenesisConfigInfo {
-            genesis_config,
-            validator_pubkey,
-            ..
-        } = genesis;
         Self {
             bank,
-            genesis_config,
-            validator_pubkey,
+            validator_pubkey: Default::default(),
         }
+    }
+
+    pub fn new_with_path(
+        base_path: &Path,
+        dir_count: u32,
+        pre_slot: Slot,
+        last_slot: Slot,
+        mint_lamports: u64,
+    ) -> Result<Self> {
+        let paths = (0..dir_count)
+            .map(|i| {
+                let path = base_path.join(i.to_string());
+                create_accounts_run_and_snapshot_dirs(&path).map(|(run_dir, _snapshot_dir)| run_dir)
+            })
+            .collect::<std::result::Result<Vec<_>, std::io::Error>>()?;
+        let genesis = create_genesis_config(mint_lamports);
+        let bank = Bank::new_with_paths_for_tests(
+            &genesis.genesis_config,
+            Default::default(),
+            paths,
+            BankTestConfig::default().secondary_indexes,
+            Default::default(),
+        );
+
+        let mut wrap = Self::new_from_bank(bank, pre_slot, last_slot);
+        wrap.validator_pubkey = genesis.validator_pubkey;
+        Ok(wrap)
     }
 }
 

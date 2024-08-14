@@ -5,7 +5,10 @@ use rollups_interface::{
 };
 use solana_sdk::{pubkey::Pubkey, transaction::VersionedTransaction};
 use solana_svm::transaction_processor::TransactionBatchProcessor;
-use std::sync::{Arc, RwLock};
+use std::{
+    path::Path,
+    sync::{Arc, RwLock},
+};
 use svm_executor::{
     bank::BankWrapper,
     builder::simple::create_transaction_processor,
@@ -54,23 +57,23 @@ impl Producer for SvmProducer {
 }
 
 impl SvmProducer {
-    pub fn new(ledger: SharedLedger) -> Self {
-        let mut bank = BankWrapper::new(20, 30, 10_000);
+    pub fn new(base_path: &Path, ledger: SharedLedger) -> anyhow::Result<Self>  {
+        let mut bank = BankWrapper::new_with_path(base_path, 4, 20, 30, 10_000)?;
         let fork_graph = Arc::new(RwLock::new(fork_graph::MockForkGraph::default()));
         let tx_processor = Arc::new(create_transaction_processor(&mut bank, fork_graph.clone()));
         let system_account = Pubkey::from([0u8; 32]);
-        Self {
+        Ok(Self {
             ledger,
             bank,
             fork_graph,
             tx_processor,
             system_account,
             txs_per_entry: 64,
-        }
+        })
     }
 
     async fn process_txs(&self, attribute: PayloadAttributeImpl) -> Result<Vec<SimpleEntry>> {
-        // TODO: increase blockheight
+        // TODO: increase blockheight after processing
         let mut result = vec![];
 
         let mut txs = vec![];

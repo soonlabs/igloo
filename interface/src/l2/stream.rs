@@ -1,5 +1,4 @@
 use super::Transaction;
-use crate::error::Result;
 
 pub trait BatchSettings {
     fn max_size(&self) -> usize;
@@ -9,8 +8,9 @@ pub trait TransactionStream {
     type TxIn: Transaction;
     type TxOut: Transaction;
     type Settings: BatchSettings;
+    type Error;
 
-    fn insert(&mut self, tx: Self::TxIn) -> Result<()>;
+    async fn insert(&mut self, tx: Self::TxIn) -> Result<(), Self::Error>;
 
-    fn next_batch(&mut self, settings: Self::Settings) -> Vec<Self::TxOut>;
+    async fn next_batch(&mut self, settings: Self::Settings) -> Vec<Self::TxOut>;
 }
