@@ -4,8 +4,8 @@ pub mod blockstore;
 pub mod engine;
 pub mod head;
 pub mod ledger;
-pub mod pool;
 pub mod producer;
+pub mod stream;
 pub mod tx;
 
 pub type L2Hash = solana_sdk::hash::Hash;

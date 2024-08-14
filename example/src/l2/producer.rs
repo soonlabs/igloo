@@ -70,6 +70,7 @@ impl SvmProducer {
     }
 
     async fn process_txs(&self, attribute: PayloadAttributeImpl) -> Result<Vec<SimpleEntry>> {
+        // TODO: increase blockheight
         let mut result = vec![];
 
         let mut txs = vec![];

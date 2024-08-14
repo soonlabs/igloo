@@ -1,7 +1,7 @@
 use anyhow::Result;
 use derive::{da::DaDeriveImpl, instant::InstantDeriveImpl};
 use l2::batcher::Batcher;
-use mock::{chain::MockLayer1, pool::TxServer};
+use mock::{chain::MockLayer1, stream::TxServer};
 use rollups_interface::{l2::Engine, runner::Runner};
 use runner::SimpleRunner;
 use std::path::Path;
@@ -33,7 +33,7 @@ async fn main() -> Result<()> {
     runner.register_da(da_driver.clone());
 
     MockLayer1::new(1000, instant_sender).run();
-    TxServer::new(runner.get_engine().pool().clone()).run();
+    TxServer::new(runner.get_engine().stream().clone()).run();
     Batcher::new(da_sender).run(attribute_receiver);
     da_driver.run(da_receiver);
 

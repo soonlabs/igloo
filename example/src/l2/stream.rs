@@ -1,8 +1,8 @@
-use rollups_interface::l2::pool::{BatchSettings, TransactionPool};
+use rollups_interface::l2::stream::{BatchSettings, TransactionStream};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-pub type SharedPool = Arc<RwLock<TransactionPoolImpl>>;
+pub type SharedStream = Arc<RwLock<TransactionStreamImpl>>;
 
 pub struct SimpleBatchSettings {
     pub max_size: usize,
@@ -15,11 +15,11 @@ impl Default for SimpleBatchSettings {
 }
 
 #[derive(Default)]
-pub struct TransactionPoolImpl {
+pub struct TransactionStreamImpl {
     pub transactions: Vec<super::tx::L2Transaction>,
 }
 
-impl TransactionPool for TransactionPoolImpl {
+impl TransactionStream for TransactionStreamImpl {
     type TxIn = super::tx::L2Transaction;
     type TxOut = super::tx::L2Transaction;
     type Settings = SimpleBatchSettings;

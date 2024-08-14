@@ -4,7 +4,7 @@ use tokio::sync::RwLock;
 
 use crate::l1::PayloadAttribute;
 
-pub mod pool;
+pub mod stream;
 
 pub trait Transaction {
     type Address;
@@ -53,13 +53,13 @@ pub trait Block {
 }
 
 pub trait Engine: EngineApi<Self::Block, Self::Head> {
-    type TransactionPool: pool::TransactionPool;
+    type TransactionStream: stream::TransactionStream;
     type Payload: BlockPayload;
     type Head: L2Head;
     type Block: Block<Head = Self::Head>;
     type BlockHeight: Copy;
 
-    fn pool(&self) -> &Arc<RwLock<Self::TransactionPool>>;
+    fn stream(&self) -> &Arc<RwLock<Self::TransactionStream>>;
 
     async fn get_head(
         &mut self,

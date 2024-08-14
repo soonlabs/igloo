@@ -3,7 +3,9 @@ use solana_sdk::signature::Keypair;
 use std::{path::Path, sync::Arc};
 use tokio::sync::{mpsc::Sender, RwLock};
 
-use rollups_interface::l2::{pool::TransactionPool, Block, Engine, EngineApi, L2Head, Producer};
+use rollups_interface::l2::{
+    stream::TransactionStream, Block, Engine, EngineApi, L2Head, Producer,
+};
 
 use crate::l1::attribute::PayloadAttributeImpl;
 
@@ -12,13 +14,13 @@ use super::{
     blockstore::{SharedStore, SimpleStore},
     head::L2HeadImpl,
     ledger::SharedLedger,
-    pool::{SharedPool, TransactionPoolImpl},
     producer::SvmProducer,
+    stream::{SharedStream, TransactionStreamImpl},
     L2Height,
 };
 
 pub struct SvmEngine {
-    pool: SharedPool,
+    stream: SharedStream,
     producer: SvmProducer,
     ledger: SharedLedger,
     blockstore: SharedStore,
@@ -36,7 +38,7 @@ impl SvmEngine {
 
         let ledger = SharedLedger::default();
         Ok(Self {
-            pool: Default::default(),
+            stream: Default::default(),
             producer: SvmProducer::new(ledger.clone()),
             ledger,
             blockstore,
@@ -49,9 +51,9 @@ impl SvmEngine {
         attribute: PayloadAttributeImpl,
     ) -> anyhow::Result<BlockPayloadImpl> {
         let mut transactions = (*attribute.transactions).clone();
-        let extra_txs = { self.pool.write().await.next_batch(Default::default()) };
+        let extra_txs = { self.stream.write().await.next_batch(Default::default()) };
         trace!(
-            "produce block with {} deposit txs, {} txs from pool",
+            "produce block with {} deposit txs, {} normal txs",
             transactions.len(),
             extra_txs.len()
         );
@@ -73,7 +75,7 @@ impl SvmEngine {
 }
 
 impl Engine for SvmEngine {
-    type TransactionPool = TransactionPoolImpl;
+    type TransactionStream = TransactionStreamImpl;
 
     type Payload = BlockPayloadImpl;
 
@@ -83,8 +85,8 @@ impl Engine for SvmEngine {
 
     type BlockHeight = L2Height;
 
-    fn pool(&self) -> &SharedPool {
-        &self.pool
+    fn stream(&self) -> &SharedStream {
+        &self.stream
     }
 
     async fn get_head(&mut self, height: Self::BlockHeight) -> Result<Option<Self::Head>> {

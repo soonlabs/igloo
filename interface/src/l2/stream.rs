@@ -5,7 +5,7 @@ pub trait BatchSettings {
     fn max_size(&self) -> usize;
 }
 
-pub trait TransactionPool {
+pub trait TransactionStream {
     type TxIn: Transaction;
     type TxOut: Transaction;
     type Settings: BatchSettings;
