@@ -112,7 +112,7 @@ impl SanitizedTransactionBuilder {
         block_hash: Hash,
         fee_payer: (Pubkey, Signature),
         v0_message: bool,
-    ) -> Result<SanitizedTransaction, TransactionError> {
+    ) -> Result<(SanitizedTransaction, VersionedTransaction), TransactionError> {
         let mut account_keys = Vec::with_capacity(
             self.signed_mutable_accounts
                 .len()
@@ -210,17 +210,20 @@ impl SanitizedTransactionBuilder {
         };
 
         let sanitized_versioned_transaction =
-            SanitizedVersionedTransaction::try_new(transaction).unwrap();
+            SanitizedVersionedTransaction::try_new(transaction.clone()).unwrap();
 
         let loader = MockLoader {};
 
-        SanitizedTransaction::try_new(
-            sanitized_versioned_transaction,
-            Hash::new_unique(),
-            false,
-            loader,
-            &ReservedAccountKeys::new_all_activated().active,
-        )
+        Ok((
+            SanitizedTransaction::try_new(
+                sanitized_versioned_transaction,
+                Hash::new_unique(),
+                false,
+                loader,
+                &ReservedAccountKeys::new_all_activated().active,
+            )?,
+            transaction,
+        ))
     }
 
     fn clean_up(&mut self) -> Vec<InnerInstruction> {

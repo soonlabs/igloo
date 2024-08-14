@@ -1,4 +1,8 @@
 use rollups_interface::l2::pool::{BatchSettings, TransactionPool};
+use std::sync::Arc;
+use tokio::sync::RwLock;
+
+pub type SharedPool = Arc<RwLock<TransactionPoolImpl>>;
 
 pub struct SimpleBatchSettings {
     pub max_size: usize,

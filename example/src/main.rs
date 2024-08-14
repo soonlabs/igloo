@@ -1,9 +1,10 @@
 use anyhow::Result;
 use derive::{da::DaDeriveImpl, instant::InstantDeriveImpl};
-use mock::chain::MockLayer1;
-use rollups_interface::runner::Runner;
+use l2::batcher::Batcher;
+use mock::{chain::MockLayer1, pool::TxServer};
+use rollups_interface::{l2::Engine, runner::Runner};
 use runner::SimpleRunner;
-use solana_sdk::{signature::Keypair, signer::Signer};
+use std::path::Path;
 use tokio::sync::mpsc::channel;
 
 mod derive;
@@ -19,21 +20,22 @@ extern crate log;
 async fn main() -> Result<()> {
     env_logger::init();
 
-    let deposit_kp = Keypair::new();
-    let deposit_from = deposit_kp.pubkey();
-
     let (instant_sender, instant_receiver) = channel(1024);
     let instanct_driver = InstantDeriveImpl::new(instant_receiver);
 
     let (da_sender, da_receiver) = channel(1);
-    let da_driver = DaDeriveImpl::new(da_receiver);
+    let da_driver = DaDeriveImpl::default();
 
-    let mut runner = SimpleRunner::new();
+    let (attribute_sender, attribute_receiver) = channel(1024);
+    let mut runner = SimpleRunner::new(&Path::new("/tmp/rollups-example"), attribute_sender)?;
 
     runner.register_instant(instanct_driver);
-    runner.register_da(da_driver);
+    runner.register_da(da_driver.clone());
 
-    MockLayer1::new(deposit_from, 1000, instant_sender).run();
+    MockLayer1::new(1000, instant_sender).run();
+    TxServer::new(runner.get_engine().pool().clone()).run();
+    Batcher::new(da_sender).run(attribute_receiver);
+    da_driver.run(da_receiver);
 
     loop {
         if let Err(e) = runner.advance().await {

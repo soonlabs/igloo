@@ -8,4 +8,7 @@ pub trait InstantDerive {
     fn get_new_block(&mut self) -> Result<Option<Self::L1Info>, Self::Error>;
 }
 
-pub trait DaDerive<P: PayloadAttribute>: Iterator<Item = P> {}
+pub trait DaDerive {
+    type Item: PayloadAttribute;
+    async fn next(&mut self) -> Option<Self::Item>;
+}

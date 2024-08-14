@@ -45,6 +45,7 @@ impl TryInto<PayloadAttributeImpl> for L1BlockInfoImpl {
         Ok(PayloadAttributeImpl {
             transactions: Arc::new(deposit_tx),
             epoch,
+            sequence_number: 0,
         })
     }
 }

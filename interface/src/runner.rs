@@ -1,10 +1,9 @@
 use crate::{
     derive::{DaDerive, InstantDerive},
-    l1::PayloadAttribute,
     l2::Engine,
 };
 
-pub trait Runner<E: Engine, ID: InstantDerive, DD: DaDerive<P>, P: PayloadAttribute> {
+pub trait Runner<E: Engine, ID: InstantDerive, DD: DaDerive> {
     type Error;
 
     fn register_instant(&mut self, derive: ID);

@@ -1,35 +1,36 @@
-use anyhow::Result;
-use rollups_interface::derive::DaDerive;
-use tokio::sync::mpsc::Receiver;
-
 use crate::l1::attribute::PayloadAttributeImpl;
+use rollups_interface::derive::DaDerive;
+use std::sync::Arc;
+use tokio::sync::{mpsc::Receiver, RwLock};
 
+#[derive(Clone, Default)]
 pub struct DaDeriveImpl {
-    receiver: Receiver<Vec<PayloadAttributeImpl>>,
-    cached: Vec<PayloadAttributeImpl>,
+    cached: Arc<RwLock<Vec<PayloadAttributeImpl>>>,
 }
 
-impl DaDerive<PayloadAttributeImpl> for DaDeriveImpl {}
-
-impl Iterator for DaDeriveImpl {
+impl DaDerive for DaDeriveImpl {
     type Item = PayloadAttributeImpl;
 
-    fn next(&mut self) -> Option<Self::Item> {
-        todo!()
+    async fn next(&mut self) -> Option<Self::Item> {
+        self.cached.write().await.pop()
     }
 }
 
 impl DaDeriveImpl {
-    pub fn new(receiver: Receiver<Vec<PayloadAttributeImpl>>) -> Self {
-        Self {
-            receiver,
-            cached: vec![],
-        }
+    pub fn run(&self, receiver: Receiver<Vec<PayloadAttributeImpl>>) {
+        tokio::spawn(Self::try_update(self.cached.clone(), receiver));
     }
 
-    pub async fn try_update(&mut self) -> Result<()> {
-        let payloads = self.receiver.try_recv()?;
-        self.cached.extend(payloads);
-        Ok(())
+    pub async fn try_update(
+        cached: Arc<RwLock<Vec<PayloadAttributeImpl>>>,
+        mut receiver: Receiver<Vec<PayloadAttributeImpl>>,
+    ) {
+        loop {
+            let payloads = receiver.recv().await;
+
+            if let Some(payloads) = payloads {
+                cached.write().await.extend(payloads);
+            }
+        }
     }
 }

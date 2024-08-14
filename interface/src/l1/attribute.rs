@@ -17,8 +17,11 @@ pub trait Epoch {
 pub trait PayloadAttribute {
     type Transaction: l2::Transaction;
     type Epoch: Epoch;
+    type SequenceNumber: Copy;
 
     fn transactions(&self) -> Arc<Vec<Self::Transaction>>;
 
     fn epoch_info(&self) -> &Self::Epoch;
+
+    fn sequence_number(&self) -> Self::SequenceNumber;
 }

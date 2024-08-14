@@ -1327,7 +1327,11 @@ dependencies = [
  "log",
  "rand 0.8.5",
  "rollups-interface",
+ "solana-entry",
+ "solana-ledger",
  "solana-sdk",
+ "solana-svm",
+ "svm-executor",
  "tokio",
 ]
 
@@ -3215,6 +3219,7 @@ version = "0.1.0"
 dependencies = [
  "bincode",
  "thiserror",
+ "tokio",
 ]
 
 [[package]]

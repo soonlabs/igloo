@@ -4,6 +4,7 @@ use super::{head::L1HeadImpl, L1Hash, L1Height, L1Timestamp};
 use crate::l2::tx::L2Transaction;
 use rollups_interface::l1::{Epoch, PayloadAttribute};
 
+#[derive(Clone)]
 pub struct EpochInfo {
     hash: L1Hash,
     height: L1Height,
@@ -40,14 +41,17 @@ impl TryFrom<L1HeadImpl> for EpochInfo {
     }
 }
 
+#[derive(Clone)]
 pub struct PayloadAttributeImpl {
     pub transactions: Arc<Vec<L2Transaction>>,
     pub epoch: EpochInfo,
+    pub sequence_number: u8,
 }
 
 impl PayloadAttribute for PayloadAttributeImpl {
     type Transaction = L2Transaction;
     type Epoch = EpochInfo;
+    type SequenceNumber = u8;
 
     fn transactions(&self) -> std::sync::Arc<Vec<Self::Transaction>> {
         self.transactions.clone()
@@ -55,6 +59,10 @@ impl PayloadAttribute for PayloadAttributeImpl {
 
     fn epoch_info(&self) -> &Self::Epoch {
         &self.epoch
+    }
+
+    fn sequence_number(&self) -> Self::SequenceNumber {
+        self.sequence_number
     }
 }
 
@@ -65,6 +73,7 @@ impl TryFrom<L1HeadImpl> for PayloadAttributeImpl {
         Ok(Self {
             transactions: Default::default(),
             epoch: value.try_into()?,
+            sequence_number: 0,
         })
     }
 }

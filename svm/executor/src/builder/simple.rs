@@ -10,6 +10,7 @@ use solana_sdk::{
     instruction::AccountMeta,
     pubkey::Pubkey,
     signature::Signature,
+    transaction::VersionedTransaction,
 };
 use solana_svm::{
     account_loader::{CheckedTransactionDetails, TransactionCheckResult},
@@ -44,6 +45,8 @@ pub struct SimpleBuilder<B: TransactionProcessingCallback + BankOperations + Def
     bank: B,
     settings: Settings,
     tx_builder: SanitizedTransactionBuilder,
+    tx_processor: Option<Arc<TransactionBatchProcessor<MockForkGraph>>>,
+    fork_graph: Arc<RwLock<MockForkGraph>>,
 
     program_path: Option<String>,
     program_buffer: Option<Vec<u8>>,
@@ -67,6 +70,16 @@ where
     B: TransactionProcessingCallback + BankOperations + BankInfo + Default,
 {
     pub fn build(&mut self) -> Result<LoadAndExecuteSanitizedTransactionsOutput> {
+        let (result, _) = self.build_ex()?;
+        Ok(result)
+    }
+
+    pub fn build_ex(
+        &mut self,
+    ) -> Result<(
+        LoadAndExecuteSanitizedTransactionsOutput,
+        VersionedTransaction,
+    )> {
         let buffer = self.read_program()?;
         let program_id = self.bank.deploy_program(buffer);
 
@@ -78,45 +91,66 @@ where
             self.calldata.clone(),
         );
 
-        let sanitized_transaction = self.tx_builder.build(
+        let (sanitized_transaction, versioned_transaction) = self.tx_builder.build(
             self.bank.last_blockhash(),
             (accounts.fee_payer, Signature::new_unique()),
             self.v0_message,
         )?;
         let check_result = self.get_checked_tx_details();
 
-        let batch_processor = TransactionBatchProcessor::<MockForkGraph>::new(
-            self.bank.execution_slot(),
-            self.bank.execution_epoch(),
-            HashSet::new(),
-        );
-        let fork_graph = Arc::new(RwLock::new(MockForkGraph {}));
-        create_executable_environment(
-            fork_graph.clone(),
-            &mut batch_processor.program_cache.write().unwrap(),
-        );
-
-        self.bank.set_clock();
-        batch_processor.fill_missing_sysvar_cache_entries(&self.bank);
-
-        register_builtins(&self.bank, &batch_processor);
+        if self.tx_processor.is_none() {
+            self.tx_processor = Some(Arc::new(create_transaction_processor(
+                &mut self.bank,
+                self.fork_graph.clone(),
+            )));
+        }
 
         let processing_config = self.get_processing_config();
-        Ok(batch_processor.load_and_execute_sanitized_transactions(
-            &self.bank,
-            &[sanitized_transaction],
-            vec![check_result],
-            &Default::default(),
-            &processing_config,
+        Ok((
+            self.tx_processor
+                .as_ref()
+                .ok_or(Error::TransactionProcessorIsNone)?
+                .load_and_execute_sanitized_transactions(
+                    &self.bank,
+                    &[sanitized_transaction],
+                    vec![check_result],
+                    &Default::default(),
+                    &processing_config,
+                ),
+            versioned_transaction,
         ))
     }
 
-    pub fn mock_bank(&self) -> &B {
+    pub fn settings(&mut self, settings: Settings) -> &mut Self {
+        self.settings = settings;
+        self
+    }
+
+    pub fn bank(&mut self, bank: B) -> &mut Self {
+        self.bank = bank;
+        self
+    }
+
+    pub fn get_bank(&self) -> &B {
         &self.bank
     }
 
-    pub fn settings(&self) -> &Settings {
-        &self.settings
+    pub fn tx_processor(
+        &mut self,
+        tx_processor: Arc<TransactionBatchProcessor<MockForkGraph>>,
+    ) -> &mut Self {
+        self.tx_processor = Some(tx_processor);
+        self
+    }
+
+    pub fn tx_builder(&mut self, tx_builder: SanitizedTransactionBuilder) -> &mut Self {
+        self.tx_builder = tx_builder;
+        self
+    }
+
+    pub fn fork_graph(&mut self, fork_graph: Arc<RwLock<MockForkGraph>>) -> &mut Self {
+        self.fork_graph = fork_graph;
+        self
     }
 
     pub fn program_path(&mut self, path: Option<String>) -> &mut Self {
@@ -246,4 +280,29 @@ where
             ..Default::default()
         }
     }
+}
+
+pub fn create_transaction_processor<B>(
+    bank: &mut B,
+    fork_graph: Arc<RwLock<MockForkGraph>>,
+) -> TransactionBatchProcessor<MockForkGraph>
+where
+    B: TransactionProcessingCallback + BankOperations + BankInfo + Default,
+{
+    let tx_processor = TransactionBatchProcessor::<MockForkGraph>::new(
+        bank.execution_slot(),
+        bank.execution_epoch(),
+        HashSet::new(),
+    );
+    create_executable_environment(
+        fork_graph.clone(),
+        &mut tx_processor.program_cache.write().unwrap(),
+    );
+
+    bank.set_clock();
+    tx_processor.fill_missing_sysvar_cache_entries(bank);
+
+    register_builtins(bank, &tx_processor);
+
+    tx_processor
 }

@@ -68,7 +68,7 @@ fn db_clock_sysvar_works() {
         .unwrap();
     let time = i64::from_be_bytes(return_data.data[0..8].try_into().unwrap());
     let clock_data = builder
-        .mock_bank()
+        .get_bank()
         .get_account_shared_data(&Clock::id())
         .unwrap();
     let clock_info: Clock = bincode::deserialize(clock_data.data()).unwrap();

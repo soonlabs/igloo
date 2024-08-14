@@ -1,3 +1,7 @@
+use std::sync::Arc;
+
+use tokio::sync::RwLock;
+
 use crate::l1::PayloadAttribute;
 
 pub mod pool;
@@ -24,7 +28,9 @@ pub trait L2Head {
     fn timestamp(&self) -> Self::Timestamp;
 }
 
-pub trait Entry {}
+pub trait Entry {
+    fn tx_count(&self) -> usize;
+}
 
 pub trait Producer {
     type Attribute: PayloadAttribute;
@@ -53,9 +59,7 @@ pub trait Engine: EngineApi<Self::Block, Self::Head> {
     type Block: Block<Head = Self::Head>;
     type BlockHeight: Copy;
 
-    fn pool(&self) -> &Self::TransactionPool;
-
-    fn pool_mut(&mut self) -> &mut Self::TransactionPool;
+    fn pool(&self) -> &Arc<RwLock<Self::TransactionPool>>;
 
     async fn get_head(
         &mut self,

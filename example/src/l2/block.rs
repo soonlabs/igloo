@@ -1,8 +1,24 @@
 use rollups_interface::l2::{Block, BlockPayload, Entry};
+use solana_sdk::transaction::VersionedTransaction;
 
 use super::head::L2HeadImpl;
 
-pub struct SimpleEntry {}
+#[derive(Clone)]
+pub struct SimpleEntry {
+    pub inner: solana_entry::entry::Entry,
+}
+
+impl SimpleEntry {
+    pub fn new(txs: Vec<VersionedTransaction>) -> Self {
+        Self {
+            inner: solana_entry::entry::Entry {
+                num_hashes: txs.len() as u64,
+                hash: Default::default(),
+                transactions: txs,
+            },
+        }
+    }
+}
 
 #[derive(Default)]
 pub struct BlockPayloadImpl {
@@ -18,11 +34,16 @@ impl BlockPayload for BlockPayloadImpl {
     }
 }
 
-impl Entry for SimpleEntry {}
+impl Entry for SimpleEntry {
+    fn tx_count(&self) -> usize {
+        self.inner.transactions.len()
+    }
+}
 
+#[derive(Clone)]
 pub struct BlockImpl {
     pub head: L2HeadImpl,
-    // TODO: add extra fields
+    pub entries: Vec<SimpleEntry>,
 }
 
 impl Block for BlockImpl {
@@ -35,6 +56,9 @@ impl Block for BlockImpl {
 
 impl From<BlockPayloadImpl> for BlockImpl {
     fn from(value: BlockPayloadImpl) -> Self {
-        Self { head: value.head }
+        Self {
+            head: value.head,
+            entries: value.entries,
+        }
     }
 }

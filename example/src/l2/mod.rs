@@ -1,4 +1,6 @@
+pub mod batcher;
 pub mod block;
+pub mod blockstore;
 pub mod engine;
 pub mod head;
 pub mod ledger;

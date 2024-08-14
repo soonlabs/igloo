@@ -9,6 +9,7 @@ use solana_sdk::{
     account_utils::StateMut,
     bpf_loader_upgradeable::{self, UpgradeableLoaderState},
     clock::Slot,
+    genesis_config::GenesisConfig,
     hash::{hashv, Hash},
     pubkey::Pubkey,
 };
@@ -19,9 +20,12 @@ use super::{BankInfo, BankOperations};
 const PREVIOUS_SLOT: Slot = 20;
 const LATEST_SLOT: Slot = 30;
 
+#[derive(Clone)]
 pub struct BankWrapper {
     bank: Arc<Bank>,
-    _genesis: GenesisConfigInfo,
+
+    pub genesis_config: GenesisConfig,
+    pub validator_pubkey: Pubkey,
 }
 
 impl TransactionProcessingCallback for BankWrapper {
@@ -99,26 +103,30 @@ impl BankInfo for BankWrapper {
 
 impl Default for BankWrapper {
     fn default() -> Self {
-        let genesis = create_genesis_config(10_000);
+        Self::new(PREVIOUS_SLOT, LATEST_SLOT, 10_000)
+    }
+}
+
+impl BankWrapper {
+    pub fn new(pre_slot: Slot, last_slot: Slot, mint_lamports: u64) -> Self {
+        let genesis = create_genesis_config(mint_lamports);
         let bank = Bank::new_for_tests(&genesis.genesis_config);
         let (bank, bank_forks) = bank.wrap_with_bank_forks_for_tests();
         goto_end_of_slot(bank.clone());
-        let bank = new_bank_from_parent_with_bank_forks(
-            &bank_forks,
-            bank,
-            &Pubkey::default(),
-            PREVIOUS_SLOT,
-        );
-        let bank = new_bank_from_parent_with_bank_forks(
-            &bank_forks,
-            bank,
-            &Pubkey::default(),
-            LATEST_SLOT,
-        );
+        let bank =
+            new_bank_from_parent_with_bank_forks(&bank_forks, bank, &Pubkey::default(), pre_slot);
+        let bank =
+            new_bank_from_parent_with_bank_forks(&bank_forks, bank, &Pubkey::default(), last_slot);
 
+        let GenesisConfigInfo {
+            genesis_config,
+            validator_pubkey,
+            ..
+        } = genesis;
         Self {
             bank,
-            _genesis: genesis,
+            genesis_config,
+            validator_pubkey,
         }
     }
 }

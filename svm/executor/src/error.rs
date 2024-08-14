@@ -7,6 +7,9 @@ pub enum Error {
     #[error("Builder Error: {0}")]
     BuilderError(String),
 
+    #[error("Transaction processor is none")]
+    TransactionProcessorIsNone,
+
     #[error(transparent)]
     StdIo(#[from] std::io::Error),
 

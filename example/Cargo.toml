@@ -9,7 +9,13 @@ edition.workspace = true
 
 [dependencies]
 rollups-interface = { workspace = true }
+svm-executor = { workspace = true }
+
 solana-sdk = { workspace = true }
+solana-svm = { workspace = true }
+solana-entry = { workspace = true }
+solana-ledger = { workspace = true }
+
 anyhow = { workspace = true }
 log = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
