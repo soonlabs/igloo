@@ -29,6 +29,7 @@ pub struct Cli {
 }
 
 impl Cli {
+    #[allow(clippy::type_complexity)]
     pub fn parse_accounts(&self) -> Result<Vec<(Pubkey, Option<u64>, bool, bool)>> {
         let mut parsed_accounts = vec![];
 

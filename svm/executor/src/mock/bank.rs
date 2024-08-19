@@ -9,7 +9,8 @@ use {
         clock::{Clock, UnixTimestamp},
         feature_set::FeatureSet,
         native_loader,
-        pubkey::Pubkey, sysvar::SysvarId,
+        pubkey::Pubkey,
+        sysvar::SysvarId,
     },
     solana_svm::transaction_processing_callback::TransactionProcessingCallback,
     std::{

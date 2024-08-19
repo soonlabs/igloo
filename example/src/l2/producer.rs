@@ -57,7 +57,7 @@ impl Producer for SvmProducer {
 }
 
 impl SvmProducer {
-    pub fn new(base_path: &Path, ledger: SharedLedger) -> anyhow::Result<Self>  {
+    pub fn new(base_path: &Path, ledger: SharedLedger) -> anyhow::Result<Self> {
         let mut bank = BankWrapper::new_with_path(base_path, 4, 20, 30, 10_000)?;
         let fork_graph = Arc::new(RwLock::new(fork_graph::MockForkGraph::default()));
         let tx_processor = Arc::new(create_transaction_processor(&mut bank, fork_graph.clone()));
@@ -85,7 +85,7 @@ impl SvmProducer {
                 txs = vec![];
             }
         }
-        if txs.len() > 0 {
+        if !txs.is_empty() {
             result.push(SimpleEntry::new(txs));
         }
 
@@ -117,7 +117,7 @@ impl SvmProducer {
 
         if result
             .execution_results
-            .get(0)
+            .first()
             .ok_or(anyhow::anyhow!("no result"))?
             .details()
             .ok_or(anyhow::anyhow!("no details"))?
