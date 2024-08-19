@@ -26,18 +26,18 @@ tokio = "1.37"
 chrono = "0.4.24"
 rand = "0.8.5"
 
-solana-bpf-loader-program = { git = "https://github.com/anza-xyz/agave.git", rev = "57a09f19f989228f1cfb195203cc60ea0120dd08" }
-solana-compute-budget = { git = "https://github.com/anza-xyz/agave.git", rev = "57a09f19f989228f1cfb195203cc60ea0120dd08" }
-solana-program-runtime = { git = "https://github.com/anza-xyz/agave.git", rev = "57a09f19f989228f1cfb195203cc60ea0120dd08" }
-solana-sdk = { git = "https://github.com/anza-xyz/agave.git", rev = "57a09f19f989228f1cfb195203cc60ea0120dd08" }
-solana-svm = { git = "https://github.com/anza-xyz/agave.git", rev = "57a09f19f989228f1cfb195203cc60ea0120dd08" }
-solana-system-program = { git = "https://github.com/anza-xyz/agave.git", rev = "57a09f19f989228f1cfb195203cc60ea0120dd08" }
-solana-logger = { git = "https://github.com/anza-xyz/agave.git", rev = "57a09f19f989228f1cfb195203cc60ea0120dd08" }
-solana-test-validator = { git = "https://github.com/anza-xyz/agave.git", rev = "57a09f19f989228f1cfb195203cc60ea0120dd08" }
-solana-ledger = { git = "https://github.com/anza-xyz/agave.git", rev = "57a09f19f989228f1cfb195203cc60ea0120dd08" }
-solana-runtime = { git = "https://github.com/anza-xyz/agave.git", rev = "57a09f19f989228f1cfb195203cc60ea0120dd08" }
-solana-entry = { git = "https://github.com/anza-xyz/agave.git", rev = "57a09f19f989228f1cfb195203cc60ea0120dd08" }
-solana-accounts-db = { git = "https://github.com/anza-xyz/agave.git", rev = "57a09f19f989228f1cfb195203cc60ea0120dd08" }
+solana-bpf-loader-program = { version = "2.0.6" }
+solana-compute-budget = { version = "2.0.6" }
+solana-program-runtime = { version = "2.0.6" }
+solana-sdk = { version = "2.0.6" }
+solana-svm = { version = "2.0.6" }
+solana-system-program = { version = "2.0.6" }
+solana-logger = { version = "2.0.6" }
+solana-test-validator = { version = "2.0.6" }
+solana-ledger = { version = "2.0.6" }
+solana-runtime = { version = "2.0.6" }
+solana-entry = { version = "2.0.6" }
+solana-accounts-db = { version = "2.0.6" }
 
 rollups-interface = { path = "interface" }
 svm-executor = { path = "svm/executor" }
