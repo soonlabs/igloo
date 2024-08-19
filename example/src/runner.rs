@@ -79,6 +79,7 @@ impl SimpleRunner {
         Ok(())
     }
 
+    #[allow(clippy::unnecessary_fallible_conversions)]
     async fn new_block(&mut self, block: BlockPayloadImpl) -> Result<L2HeadImpl> {
         let new_head = self.engine.new_block(block.try_into()?).await?;
         info!(

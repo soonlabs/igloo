@@ -63,6 +63,10 @@ fn run<B: TransactionProcessingCallback + BankOperations + BankInfo + Default>(
 }
 
 fn decode_hex_with_prefix(s: &str) -> Result<Vec<u8>> {
-    let trimmed = if s.starts_with("0x") { &s[2..] } else { s };
+    let trimmed = if let Some(stripped) = s.strip_prefix("0x") {
+        stripped
+    } else {
+        s
+    };
     Ok(hex::decode(trimmed)?)
 }

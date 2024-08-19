@@ -27,7 +27,7 @@ async fn main() -> Result<()> {
     let da_driver = DaDeriveImpl::default();
 
     let (attribute_sender, attribute_receiver) = channel(1024);
-    let mut runner = SimpleRunner::new(&Path::new("/tmp/rollups-example"), attribute_sender)?;
+    let mut runner = SimpleRunner::new(Path::new("/tmp/rollups-example"), attribute_sender)?;
 
     runner.register_instant(instanct_driver);
     runner.register_da(da_driver.clone());
