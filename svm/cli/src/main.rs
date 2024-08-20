@@ -1,12 +1,17 @@
 use anyhow::Result;
 use clap::Parser;
+use rollups_interface::l2::{
+    bank::{BankInfo, BankOperations},
+    executor::{Config, Init},
+};
+use solana_sdk::{account::AccountSharedData, clock::Slot, hash::Hash, pubkey::Pubkey};
 use solana_svm::{
     transaction_processing_callback::TransactionProcessingCallback,
     transaction_results::TransactionExecutionResult,
 };
 use svm_executor::{
-    bank::{BankInfo, BankOperations, BankWrapper},
-    mock::bank::MockBankCallback,
+    bank::{BankWrapper, WrapperConfig},
+    mock::bank::{MockBankCallback, MockConfig},
     prelude::SimpleBuilder,
 };
 
@@ -21,17 +26,24 @@ fn main() -> Result<()> {
     let cli = cli::Cli::parse();
     if cli.memory_mode {
         info!("use memory mode");
-        run::<MockBankCallback>(cli)
+        run::<MockBankCallback, _>(cli, &MockConfig::default())
     } else {
         info!("use bank mode");
-        run::<BankWrapper>(cli)
+        run::<BankWrapper, _>(cli, &WrapperConfig::default())
     }
 }
 
-fn run<B: TransactionProcessingCallback + BankOperations + BankInfo + Default>(
+fn run<
+    B: TransactionProcessingCallback
+        + BankOperations<Pubkey = Pubkey, AccountSharedData = AccountSharedData>
+        + BankInfo<Pubkey = Pubkey, Hash = Hash, Slot = Slot>
+        + Init<Config = C>,
+    C: Config,
+>(
     cli: cli::Cli,
+    cfg: &C,
 ) -> Result<()> {
-    let mut builder = SimpleBuilder::<B>::default();
+    let mut builder = SimpleBuilder::<B>::init(cfg)?;
     for (pubkey, lamports, is_signer, is_writable) in cli.parse_accounts().unwrap() {
         builder.account_with_balance(pubkey, lamports, is_signer, is_writable);
     }

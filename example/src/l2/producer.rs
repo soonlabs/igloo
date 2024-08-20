@@ -1,7 +1,7 @@
 use anyhow::{Ok, Result};
 use rollups_interface::{
     l1::PayloadAttribute,
-    l2::{Entry, Producer},
+    l2::{executor::Init, Entry, Producer},
 };
 use solana_sdk::{pubkey::Pubkey, transaction::VersionedTransaction};
 use solana_svm::transaction_processor::TransactionBatchProcessor;
@@ -58,7 +58,7 @@ impl Producer for SvmProducer {
 
 impl SvmProducer {
     pub fn new(base_path: &Path, ledger: SharedLedger) -> anyhow::Result<Self> {
-        let mut bank = BankWrapper::new_with_path(base_path, 4, 20, 30, 10_000)?;
+        let mut bank = BankWrapper::new_with_path(base_path, 4, &Default::default())?;
         let fork_graph = Arc::new(RwLock::new(fork_graph::MockForkGraph::default()));
         let tx_processor = Arc::new(create_transaction_processor(&mut bank, fork_graph.clone()));
         let system_account = Pubkey::from([0u8; 32]);
@@ -95,13 +95,14 @@ impl SvmProducer {
             result.len(),
             result.iter().map(|e| e.tx_count()).sum::<usize>()
         );
+
         Ok(result)
     }
 
     // TODO: process batch transactions
     async fn process_single_tx(&self, tx: &L2Transaction) -> Result<VersionedTransaction> {
         const INIT_LAMPORTS: u64 = 900000;
-        let mut builder = SimpleBuilder::<BankWrapper>::default();
+        let mut builder = SimpleBuilder::<BankWrapper>::init(&Default::default())?;
         let path = self.get_program_path();
         let (result, txs) = builder
             .tx_processor(self.tx_processor.clone())

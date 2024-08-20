@@ -5,8 +5,14 @@ use std::{
     sync::{Arc, RwLock},
 };
 
+use rollups_interface::l2::{
+    bank::{BankInfo, BankOperations},
+    executor::{Config, Init},
+};
 use solana_sdk::{
     account::{AccountSharedData, WritableAccount},
+    clock::Slot,
+    hash::Hash,
     instruction::AccountMeta,
     pubkey::Pubkey,
     signature::Signature,
@@ -22,12 +28,8 @@ use solana_svm::{
 };
 
 use crate::{
-    bank::{BankInfo, BankOperations},
-    builtin::register_builtins,
-    env::create_executable_environment,
-    mock::fork_graph::MockForkGraph,
-    prelude::*,
-    transaction::builder::SanitizedTransactionBuilder,
+    builtin::register_builtins, env::create_executable_environment,
+    mock::fork_graph::MockForkGraph, prelude::*, transaction::builder::SanitizedTransactionBuilder,
 };
 
 pub struct Settings {
@@ -40,8 +42,7 @@ pub struct ExecutionAccounts {
     pub signatures: HashMap<Pubkey, Signature>,
 }
 
-#[derive(Default)]
-pub struct SimpleBuilder<B: TransactionProcessingCallback + BankOperations + Default> {
+pub struct SimpleBuilder<B: TransactionProcessingCallback + BankOperations + BankInfo> {
     bank: B,
     settings: Settings,
     tx_builder: SanitizedTransactionBuilder,
@@ -65,9 +66,43 @@ impl Default for Settings {
     }
 }
 
+impl<B, C> Init for SimpleBuilder<B>
+where
+    B: TransactionProcessingCallback
+        + BankOperations<Pubkey = Pubkey, AccountSharedData = AccountSharedData>
+        + BankInfo<Hash = Hash, Pubkey = Pubkey, Slot = Slot>
+        + Init<Config = C>,
+    C: Config,
+{
+    type Error = Error;
+    type Config = C;
+
+    fn init(cfg: &Self::Config) -> std::result::Result<Self, Self::Error>
+    where
+        Self: Sized,
+    {
+        let bank = B::init(cfg).map_err(|e| Error::BuilderError(e.to_string()))?;
+        Ok(Self {
+            bank,
+            settings: Default::default(),
+            tx_builder: Default::default(),
+            tx_processor: Default::default(),
+            fork_graph: Default::default(),
+            program_path: Default::default(),
+            program_buffer: Default::default(),
+            calldata: Default::default(),
+            accounts: Default::default(),
+            v0_message: Default::default(),
+            check_result: Default::default(),
+        })
+    }
+}
+
 impl<B> SimpleBuilder<B>
 where
-    B: TransactionProcessingCallback + BankOperations + BankInfo + Default,
+    B: TransactionProcessingCallback
+        + BankOperations<Pubkey = Pubkey, AccountSharedData = AccountSharedData>
+        + BankInfo<Hash = Hash, Pubkey = Pubkey, Slot = Slot>,
 {
     pub fn build(&mut self) -> Result<LoadAndExecuteSanitizedTransactionsOutput> {
         let (result, _) = self.build_ex()?;
@@ -80,8 +115,15 @@ where
         LoadAndExecuteSanitizedTransactionsOutput,
         VersionedTransaction,
     )> {
+        self.bank
+            .bump()
+            .map_err(|e| Error::BuilderError(e.to_string()))?;
+
         let buffer = self.read_program()?;
-        let program_id = self.bank.deploy_program(buffer);
+        let program_id = self
+            .bank
+            .deploy_program(buffer)
+            .map_err(|e| Error::BuilderError(e.to_string()))?;
 
         let accounts = self.prepare_accounts();
         self.tx_builder.create_instruction(
@@ -287,11 +329,11 @@ pub fn create_transaction_processor<B>(
     fork_graph: Arc<RwLock<MockForkGraph>>,
 ) -> TransactionBatchProcessor<MockForkGraph>
 where
-    B: TransactionProcessingCallback + BankOperations + BankInfo + Default,
+    B: TransactionProcessingCallback + BankOperations + BankInfo<Slot = Slot>,
 {
     let tx_processor = TransactionBatchProcessor::<MockForkGraph>::new(
         bank.execution_slot(),
-        bank.execution_epoch(),
+        0, // always set epoch to 0
         HashSet::new(),
     );
     create_executable_environment(

@@ -3,6 +3,10 @@ use std::{
     sync::{Arc, RwLock},
 };
 
+use rollups_interface::l2::{
+    bank::{BankInfo, BankOperations},
+    executor::Init,
+};
 use solana_accounts_db::utils::create_accounts_run_and_snapshot_dirs;
 use solana_ledger::genesis_utils::create_genesis_config;
 use solana_runtime::{
@@ -20,15 +24,14 @@ use solana_sdk::{
 };
 use solana_svm::transaction_processing_callback::TransactionProcessingCallback;
 
-use super::{BankInfo, BankOperations};
-use crate::error::Result;
+use crate::error::{Error, Result};
 
-const PREVIOUS_SLOT: Slot = 20;
-const LATEST_SLOT: Slot = 30;
+use super::WrapperConfig;
 
 #[derive(Clone)]
 pub struct BankWrapper {
     bank: Arc<Bank>,
+    cfg: WrapperConfig,
 
     pub validator_pubkey: Pubkey,
 }
@@ -48,11 +51,15 @@ impl TransactionProcessingCallback for BankWrapper {
 }
 
 impl BankOperations for BankWrapper {
+    type Pubkey = Pubkey;
+    type AccountSharedData = AccountSharedData;
+    type Error = Error;
+
     fn insert_account(&mut self, key: Pubkey, data: AccountSharedData) {
         self.bank.store_account(&key, &data);
     }
 
-    fn deploy_program(&mut self, buffer: Vec<u8>) -> Pubkey {
+    fn deploy_program(&mut self, buffer: Vec<u8>) -> Result<Pubkey> {
         let program_key = solana_sdk::pubkey::new_rand();
         let programdata_key = solana_sdk::pubkey::new_rand();
 
@@ -74,7 +81,7 @@ impl BankOperations for BankWrapper {
         );
         programdata_account
             .set_state(&UpgradeableLoaderState::ProgramData {
-                slot: PREVIOUS_SLOT,
+                slot: self.cfg.previous_slot,
                 upgrade_authority_address: None,
             })
             .unwrap();
@@ -84,15 +91,24 @@ impl BankOperations for BankWrapper {
         self.bank
             .store_account(&programdata_key, &programdata_account);
 
-        program_key
+        Ok(program_key)
     }
 
     fn set_clock(&mut self) {
         // We do nothing here because there is a clock sysvar in the bank already
     }
+
+    fn bump(&mut self) -> Result<()> {
+        // do nothing by default
+        Ok(())
+    }
 }
 
 impl BankInfo for BankWrapper {
+    type Hash = Hash;
+    type Pubkey = Pubkey;
+    type Slot = Slot;
+
     fn last_blockhash(&self) -> Hash {
         self.bank.last_blockhash()
     }
@@ -101,54 +117,64 @@ impl BankInfo for BankWrapper {
         self.bank.slot()
     }
 
-    fn execution_epoch(&self) -> u64 {
-        self.bank.epoch()
+    fn collector_id(&self) -> Pubkey {
+        self.validator_pubkey
     }
 }
 
-impl Default for BankWrapper {
-    fn default() -> Self {
-        Self::new(PREVIOUS_SLOT, LATEST_SLOT, 10_000)
+impl Init for BankWrapper {
+    type Error = Error;
+
+    type Config = super::WrapperConfig;
+
+    fn init(cfg: &Self::Config) -> std::result::Result<Self, Self::Error>
+    where
+        Self: Sized,
+    {
+        Ok(Self::new(cfg))
     }
 }
 
 impl BankWrapper {
-    pub fn new(pre_slot: Slot, last_slot: Slot, mint_lamports: u64) -> Self {
-        let genesis = create_genesis_config(mint_lamports);
+    pub fn new(cfg: &WrapperConfig) -> Self {
+        let genesis = create_genesis_config(cfg.mint_lamports);
         let bank = Bank::new_for_tests(&genesis.genesis_config);
-        let mut wrap = Self::new_from_bank(bank, pre_slot, last_slot);
+        let mut wrap = Self::new_from_bank(bank, cfg);
         wrap.validator_pubkey = genesis.validator_pubkey;
         wrap
     }
 
-    pub fn new_from_bank(bank: Bank, pre_slot: Slot, last_slot: Slot) -> Self {
+    pub fn new_from_bank(bank: Bank, cfg: &WrapperConfig) -> Self {
         let (bank, bank_forks) = bank.wrap_with_bank_forks_for_tests();
-        goto_end_of_slot(bank.clone());
-        let bank =
-            new_bank_from_parent_with_bank_forks(&bank_forks, bank, &Pubkey::default(), pre_slot);
-        let bank =
-            new_bank_from_parent_with_bank_forks(&bank_forks, bank, &Pubkey::default(), last_slot);
+        goto_end_of_slot(bank.clone(), cfg);
+        let bank = new_bank_from_parent_with_bank_forks(
+            &bank_forks,
+            bank,
+            &Pubkey::default(),
+            cfg.previous_slot,
+        );
+        let bank = new_bank_from_parent_with_bank_forks(
+            &bank_forks,
+            bank,
+            &Pubkey::default(),
+            cfg.latest_slot,
+        );
 
         Self {
+            cfg: cfg.clone(),
             bank,
             validator_pubkey: Default::default(),
         }
     }
 
-    pub fn new_with_path(
-        base_path: &Path,
-        dir_count: u32,
-        pre_slot: Slot,
-        last_slot: Slot,
-        mint_lamports: u64,
-    ) -> Result<Self> {
+    pub fn new_with_path(base_path: &Path, dir_count: u32, cfg: &WrapperConfig) -> Result<Self> {
         let paths = (0..dir_count)
             .map(|i| {
                 let path = base_path.join(i.to_string());
                 create_accounts_run_and_snapshot_dirs(&path).map(|(run_dir, _snapshot_dir)| run_dir)
             })
             .collect::<std::result::Result<Vec<_>, std::io::Error>>()?;
-        let genesis = create_genesis_config(mint_lamports);
+        let genesis = create_genesis_config(cfg.mint_lamports);
         let bank = Bank::new_with_paths_for_tests(
             &genesis.genesis_config,
             Default::default(),
@@ -157,20 +183,20 @@ impl BankWrapper {
             Default::default(),
         );
 
-        let mut wrap = Self::new_from_bank(bank, pre_slot, last_slot);
+        let mut wrap = Self::new_from_bank(bank, cfg);
         wrap.validator_pubkey = genesis.validator_pubkey;
         Ok(wrap)
     }
 }
 
-fn goto_end_of_slot(bank: Arc<Bank>) {
-    goto_end_of_slot_with_scheduler(&BankWithScheduler::new_without_scheduler(bank))
+fn goto_end_of_slot(bank: Arc<Bank>, cfg: &WrapperConfig) {
+    goto_end_of_slot_with_scheduler(&BankWithScheduler::new_without_scheduler(bank), cfg)
 }
 
-fn goto_end_of_slot_with_scheduler(bank: &BankWithScheduler) {
+fn goto_end_of_slot_with_scheduler(bank: &BankWithScheduler, cfg: &WrapperConfig) {
     let mut tick_hash = bank.last_blockhash();
     loop {
-        tick_hash = hashv(&[tick_hash.as_ref(), &[PREVIOUS_SLOT as u8]]);
+        tick_hash = hashv(&[tick_hash.as_ref(), &[cfg.previous_slot as u8]]);
         bank.register_tick(&tick_hash);
         if tick_hash == bank.last_blockhash() {
             bank.freeze();

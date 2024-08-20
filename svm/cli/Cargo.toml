@@ -11,6 +11,8 @@ edition.workspace = true
 
 [dependencies]
 svm-executor = { workspace = true }
+rollups-interface = { workspace = true }
+
 solana-sdk = { workspace = true }
 solana-svm = { workspace = true }
 

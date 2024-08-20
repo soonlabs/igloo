@@ -1,5 +1,6 @@
 use std::env;
 
+use rollups_interface::l2::executor::Init;
 use solana_sdk::{
     account::ReadableAccount, clock::Clock, pubkey::Pubkey, sysvar::SysvarId,
     transaction::TransactionError,
@@ -23,7 +24,7 @@ fn get_program_path(name: &str) -> String {
 fn db_hello_program_works() {
     let path = get_program_path("hello-solana");
 
-    let mut builder = SimpleBuilder::<BankWrapper>::default();
+    let mut builder = SimpleBuilder::<BankWrapper>::init(&Default::default()).unwrap();
     let result = builder
         .program_path(Some(path))
         .build()
@@ -48,7 +49,7 @@ fn db_hello_program_works() {
 fn db_clock_sysvar_works() {
     let path = get_program_path("clock-sysvar");
 
-    let mut builder = SimpleBuilder::<BankWrapper>::default();
+    let mut builder = SimpleBuilder::<BankWrapper>::init(&Default::default()).unwrap();
     let result = builder
         .program_path(Some(path))
         .build()
@@ -83,7 +84,7 @@ fn db_simple_transfer_works() {
     let system_account = Pubkey::from([0u8; 32]);
     println!("system_account: {}", system_account);
 
-    let mut builder = SimpleBuilder::<BankWrapper>::default();
+    let mut builder = SimpleBuilder::<BankWrapper>::init(&Default::default()).unwrap();
     let result = builder
         .program_path(Some(path))
         .account_with_balance(sender, Some(900000), true, true)
@@ -117,7 +118,7 @@ fn db_simple_transfer_failed_with_insufficient_balance() {
     let recipient = Pubkey::new_unique();
     let system_account = Pubkey::from([0u8; 32]);
 
-    let mut builder = SimpleBuilder::<BankWrapper>::default();
+    let mut builder = SimpleBuilder::<BankWrapper>::init(&Default::default()).unwrap();
     let result = builder
         .program_path(Some(path))
         .account_with_balance(sender, Some(900000), true, true)
@@ -150,7 +151,7 @@ fn db_simple_transfer_failed_with_custom_check_error() {
     let recipient = Pubkey::new_unique();
     let system_account = Pubkey::from([0u8; 32]);
 
-    let mut builder = SimpleBuilder::<BankWrapper>::default();
+    let mut builder = SimpleBuilder::<BankWrapper>::init(&Default::default()).unwrap();
     let result = builder
         .program_path(Some(path))
         .account_with_balance(sender, Some(900000), true, true)

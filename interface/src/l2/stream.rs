@@ -8,7 +8,7 @@ pub trait TransactionStream {
     type TxIn: Transaction;
     type TxOut: Transaction;
     type Settings: BatchSettings;
-    type Error;
+    type Error: std::fmt::Display;
 
     async fn insert(&mut self, tx: Self::TxIn) -> Result<(), Self::Error>;
 

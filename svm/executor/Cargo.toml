@@ -23,5 +23,7 @@ solana-runtime = { workspace = true, features = ["dev-context-only-utils"] }
 solana-ledger = { workspace = true }
 solana-accounts-db = { workspace = true }
 
+rollups-interface = { workspace = true }
+
 [features]
 __test = []

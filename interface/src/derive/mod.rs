@@ -5,7 +5,7 @@ use crate::l1::{L1BlockInfo, PayloadAttribute};
 pub trait InstantDerive {
     type P: PayloadAttribute;
     type L1Info: L1BlockInfo<Self::P>;
-    type Error;
+    type Error: std::fmt::Display;
 
     /// Try to derive a new block from the L1 block, return `None` if
     ///  there is no new block to derive.
