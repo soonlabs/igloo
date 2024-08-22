@@ -23,5 +23,3 @@ pub trait BankInfo {
 
     fn collector_id(&self) -> Self::Pubkey;
 }
-
-pub trait StorageOperations {}

@@ -18,13 +18,12 @@ use solana_runtime::snapshot_config::SnapshotConfig;
 use solana_sdk::{clock::Slot, genesis_config::GenesisConfig, hash::Hash, pubkey::Pubkey};
 use solana_svm::runtime_config::RuntimeConfig;
 
-use crate::{init::init_config, Error, Result};
+use crate::{init::init_config, Result};
 
 pub const MAX_GENESIS_ARCHIVE_UNPACKED_SIZE: u64 = 10 * 1024 * 1024; // 10 MiB
 
 #[derive(Default, Clone)]
 pub struct GlobalConfig {
-    pub collector_id: Pubkey,
     pub ledger_path: PathBuf,
     pub allow_default_genesis: bool,
     pub storage: StorageConfig,
@@ -44,13 +43,10 @@ impl GlobalConfig {
         })
     }
 
-    pub fn new_temp() -> Result<Self> {
-        let ledger_path = tempfile::tempdir()
-            .map_err(|e| Error::InitCommon(e.to_string()))?
-            .into_path();
+    pub fn new_temp(ledger_path: &Path) -> Result<Self> {
         let storage = init_config(&ledger_path)?;
         Ok(Self {
-            ledger_path,
+            ledger_path: ledger_path.to_path_buf(),
             storage,
             allow_default_genesis: true,
             ..Default::default()

@@ -6,6 +6,7 @@ use crate::l1::PayloadAttribute;
 
 pub mod bank;
 pub mod executor;
+pub mod storage;
 pub mod stream;
 
 pub trait Transaction {

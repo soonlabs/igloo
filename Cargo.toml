@@ -42,6 +42,9 @@ solana-entry = { version = "2.0.6" }
 solana-accounts-db = { version = "2.0.6" }
 solana-core = { version = "2.0.6" }
 solana-stake-program = { version = "2.0.6" }
+solana-measure = { version = "2.0.6" }
+solana-gossip = { version = "2.0.6" }
+solana-streamer = { version = "2.0.6" }
 
 rollups-interface = { path = "interface" }
 svm-executor = { path = "svm/executor" }
@@ -60,7 +63,6 @@ solana-zk-token-sdk = { git = "https://github.com/anza-xyz/agave.git", rev = "60
 # solana-zk-token-sdk = { path = "../agave/zk-token-sdk" }
 
 ## patches to use local versions, uncomment if needed
-# [patch."https://github.com/anza-xyz/agave.git"]
 # solana-bpf-loader-program = { path = "../agave/programs/bpf_loader" }
 # solana-compute-budget = { path = "../agave/compute-budget" }
 # solana-program-runtime = { path = "../agave/program-runtime" }
@@ -75,3 +77,6 @@ solana-zk-token-sdk = { git = "https://github.com/anza-xyz/agave.git", rev = "60
 # solana-accounts-db = { path = "../agave/accounts-db" }
 # solana-core = { path = "../agave/core" }
 # solana-stake-program = { path = "../agave/programs/stake" }
+# solana-measure = { path = "../agave/measure" }
+# solana-gossip = { path = "../agave/gossip" }
+# solana-streamer = { path = "../agave/streamer" }

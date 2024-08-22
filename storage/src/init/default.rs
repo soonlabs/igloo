@@ -1,4 +1,4 @@
-use crate::Result;
+use crate::{Error, Result};
 use rand::Rng;
 use solana_entry::entry::create_ticks;
 use solana_ledger::{
@@ -24,6 +24,10 @@ pub(crate) fn default_genesis_config(ledger_path: &Path) -> Result<GenesisConfig
 }
 
 fn init_block_store(ledger_path: &Path, genesis_config: &GenesisConfig) -> Result<()> {
+    genesis_config
+        .write(ledger_path)
+        .map_err(|e| Error::InitCommon(format!("failed to save genesis config: {e}")))?;
+
     let blockstore = Blockstore::open_with_options(
         ledger_path,
         BlockstoreOptions {

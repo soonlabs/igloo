@@ -4,6 +4,7 @@ pub mod blockstore;
 pub mod config;
 pub mod error;
 pub mod events;
+pub mod execution;
 pub mod impls;
 pub mod init;
 pub mod ledger;

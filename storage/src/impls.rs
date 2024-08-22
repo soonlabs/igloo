@@ -1,7 +1,9 @@
 use rollups_interface::l2::{
     bank::{BankInfo, BankOperations},
     executor::Init,
+    storage::{StorageOperations, TransactionSet},
 };
+use solana_gossip::cluster_info::ClusterInfo;
 use solana_ledger::{
     blockstore::Blockstore, blockstore_processor::ProcessOptions,
     leader_schedule_cache::LeaderScheduleCache,
@@ -13,20 +15,26 @@ use solana_sdk::{
     bpf_loader_upgradeable::{self, UpgradeableLoaderState},
     clock::Slot,
     pubkey::Pubkey,
+    signature::Keypair,
+    signer::Signer,
 };
 use solana_svm::transaction_processing_callback::TransactionProcessingCallback;
 use std::sync::{atomic::AtomicBool, Arc, RwLock};
 
-use crate::{background::StorageBackground, config::GlobalConfig, Error};
+use crate::{
+    background::StorageBackground, blockstore::txs::CommitBatch, config::GlobalConfig,
+    error::BankError, execution::TransactionsResultWrapper, Error,
+};
 
-#[derive(Clone)]
 pub struct RollupStorage {
     pub(crate) bank: Arc<Bank>,
     pub(crate) bank_forks: Arc<RwLock<BankForks>>,
 
+    pub(crate) cluster_info: Arc<ClusterInfo>,
+    pub(crate) keypair: Arc<Keypair>,
     pub(crate) config: GlobalConfig,
     pub(crate) blockstore: Arc<Blockstore>,
-    pub(crate) background_service: Arc<StorageBackground>,
+    pub(crate) background_service: StorageBackground,
     pub(crate) leader_schedule_cache: Arc<LeaderScheduleCache>,
     pub(crate) process_options: ProcessOptions,
     pub(crate) exit: Arc<AtomicBool>,
@@ -41,12 +49,6 @@ impl Init for RollupStorage {
         Self: Sized,
     {
         Self::new(cfg.clone())
-    }
-}
-
-impl Drop for RollupStorage {
-    fn drop(&mut self) {
-        self.exit.store(true, std::sync::atomic::Ordering::Relaxed);
     }
 }
 
@@ -144,6 +146,60 @@ impl BankInfo for RollupStorage {
     }
 
     fn collector_id(&self) -> Self::Pubkey {
-        self.config.collector_id
+        self.keypair.pubkey()
+    }
+}
+
+impl StorageOperations for RollupStorage {
+    type Error = Error;
+    type TxsResult = TransactionsResultWrapper;
+    type TransactionSet<'a> = CommitBatch<'a>;
+
+    async fn commit<'a>(
+        &mut self,
+        result: Self::TxsResult,
+        origin: &Self::TransactionSet<'a>,
+    ) -> Result<(), Self::Error> {
+        // TODO: make commit async
+        self.blockstore_save(&result, origin.transactions())?;
+        self.bank_commit(result, origin)?;
+
+        Ok(())
+    }
+
+    async fn force_save(&mut self) -> Result<(), Self::Error> {
+        self.bank.freeze();
+        let _removed_banks = self
+            .bank_forks
+            .write()
+            .unwrap()
+            .set_root(
+                self.bank.slot(),
+                &self.background_service.accounts_background_request_sender,
+                None,
+            )
+            .map_err(|e| BankError::SetRootFailed(e.to_string()))?;
+        self.bank.rc.accounts.accounts_db.add_root(self.bank.slot());
+        self.bank.force_flush_accounts_cache();
+        Ok(())
+    }
+
+    async fn close(self) -> Result<(), Self::Error> {
+        self.exit.store(true, std::sync::atomic::Ordering::Relaxed);
+        self.blockstore.drop_signal();
+        self.join();
+        Ok(())
+    }
+}
+
+impl RollupStorage {
+    pub(crate) fn join(self) {
+        drop(self.bank);
+        drop(self.bank_forks);
+        self.background_service.join();
+    }
+
+    pub fn cluster_info(&self) -> Arc<ClusterInfo> {
+        self.cluster_info.clone()
     }
 }

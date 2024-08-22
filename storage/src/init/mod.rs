@@ -10,6 +10,7 @@ use solana_accounts_db::{
     hardened_unpack::open_genesis_config,
     utils::{create_all_accounts_run_and_snapshot_dirs, create_and_canonicalize_directories},
 };
+use solana_gossip::{cluster_info::ClusterInfo, contact_info::ContactInfo};
 use solana_ledger::{
     bank_forks_utils, blockstore::Blockstore, blockstore_options::BlockstoreOptions,
     blockstore_processor, leader_schedule_cache::LeaderScheduleCache,
@@ -18,7 +19,10 @@ use solana_runtime::{
     accounts_background_service::AccountsBackgroundService, bank_forks::BankForks,
     snapshot_hash::StartingSnapshotHashes,
 };
-use solana_sdk::genesis_config::GenesisConfig;
+use solana_sdk::{
+    genesis_config::GenesisConfig, signature::Keypair, signer::Signer, timing::timestamp,
+};
+use solana_streamer::socket::SocketAddrSpace;
 use std::{
     path::{Path, PathBuf},
     sync::{atomic::AtomicBool, Arc, RwLock},
@@ -36,18 +40,23 @@ impl RollupStorage {
             bank_forks,
             blockstore,
             leader_schedule_cache,
-            _starting_snapshot_hashes,
+            starting_snapshot_hashes,
             process_options,
             mut hub,
         ) = load_blockstore(&config, exit.clone(), SignalHub::default())?;
         config.genesis = genesis_config;
 
-        let background_service = Arc::new(StorageBackground::new(
+        let keypair = Arc::new(Keypair::new());
+        let cluster_info = create_cluster_info(keypair.clone());
+
+        let background_service = StorageBackground::new(
             bank_forks.clone(),
             &config.storage,
             &mut hub,
             exit.clone(),
-        )?);
+            cluster_info.clone(),
+            starting_snapshot_hashes,
+        )?;
 
         let bank = bank_forks.read().unwrap().working_bank();
         Ok(Self {
@@ -58,6 +67,8 @@ impl RollupStorage {
             blockstore,
             background_service,
             leader_schedule_cache: Arc::new(leader_schedule_cache),
+            keypair,
+            cluster_info,
             process_options,
         })
     }
@@ -65,6 +76,10 @@ impl RollupStorage {
     pub fn init(&mut self) -> Result<()> {
         self.aligne_blockstore_with_bank_forks()?;
         Ok(())
+    }
+
+    pub fn allow_init_from_scratch(&self) -> bool {
+        self.config.allow_default_genesis
     }
 }
 
@@ -216,4 +231,15 @@ fn blockstore_options_from_config(config: &StorageConfig) -> BlockstoreOptions {
         enforce_ulimit_nofile: config.enforce_ulimit_nofile,
         ..BlockstoreOptions::default()
     }
+}
+
+fn create_cluster_info(keypair: Arc<Keypair>) -> Arc<ClusterInfo> {
+    let contract_info = ContactInfo::new(keypair.pubkey(), timestamp(), Default::default());
+    let cluster_info = ClusterInfo::new(contract_info, keypair, SocketAddrSpace::new(false));
+    // TDOO: init cluster later
+    // cluster_info.set_contact_debug_interval(..);
+    // cluster_info.set_entrypoints(..);
+    // cluster_info.restore_contact_info(..);
+
+    Arc::new(cluster_info)
 }

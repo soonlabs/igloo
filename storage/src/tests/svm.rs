@@ -1,5 +1,3 @@
-use std::env;
-
 use anyhow::Result;
 use rollups_interface::l2::executor::Init;
 use solana_sdk::{
@@ -12,21 +10,15 @@ use solana_svm::{
 };
 use svm_executor::prelude::SimpleBuilder;
 
-use crate::{config::GlobalConfig, RollupStorage};
-
-fn get_program_path(name: &str) -> String {
-    let mut dir = env::current_dir().unwrap();
-    dir.push("../svm/executor/tests");
-    let name = name.replace('-', "_");
-    dir.push(name + "_program.so");
-    dir.to_str().unwrap().to_string()
-}
+use crate::{config::GlobalConfig, tests::get_program_path, RollupStorage};
 
 #[test]
 fn db_hello_program_works() -> Result<()> {
     let path = get_program_path("hello-solana");
 
-    let mut builder = SimpleBuilder::<RollupStorage>::init(&GlobalConfig::new_temp()?)?;
+    let mut builder = SimpleBuilder::<RollupStorage>::init(&GlobalConfig::new_temp(
+        tempfile::tempdir()?.path(),
+    )?)?;
     let result = builder
         .program_path(Some(path))
         .build()
@@ -52,7 +44,9 @@ fn db_hello_program_works() -> Result<()> {
 fn db_clock_sysvar_works() -> Result<()> {
     let path = get_program_path("clock-sysvar");
 
-    let mut builder = SimpleBuilder::<RollupStorage>::init(&GlobalConfig::new_temp()?)?;
+    let mut builder = SimpleBuilder::<RollupStorage>::init(&GlobalConfig::new_temp(
+        tempfile::tempdir()?.path(),
+    )?)?;
     let result = builder
         .program_path(Some(path))
         .build()
@@ -88,7 +82,9 @@ fn db_simple_transfer_works() -> Result<()> {
     let system_account = Pubkey::from([0u8; 32]);
     println!("system_account: {}", system_account);
 
-    let mut builder = SimpleBuilder::<RollupStorage>::init(&GlobalConfig::new_temp()?)?;
+    let mut builder = SimpleBuilder::<RollupStorage>::init(&GlobalConfig::new_temp(
+        tempfile::tempdir()?.path(),
+    )?)?;
     let result = builder
         .program_path(Some(path))
         .account_with_balance(sender, Some(900000), true, true)
@@ -123,7 +119,9 @@ fn db_simple_transfer_failed_with_insufficient_balance() -> Result<()> {
     let recipient = Pubkey::new_unique();
     let system_account = Pubkey::from([0u8; 32]);
 
-    let mut builder = SimpleBuilder::<RollupStorage>::init(&GlobalConfig::new_temp()?)?;
+    let mut builder = SimpleBuilder::<RollupStorage>::init(&GlobalConfig::new_temp(
+        tempfile::tempdir()?.path(),
+    )?)?;
     let result = builder
         .program_path(Some(path))
         .account_with_balance(sender, Some(900000), true, true)
@@ -157,7 +155,9 @@ fn db_simple_transfer_failed_with_custom_check_error() -> Result<()> {
     let recipient = Pubkey::new_unique();
     let system_account = Pubkey::from([0u8; 32]);
 
-    let mut builder = SimpleBuilder::<RollupStorage>::init(&GlobalConfig::new_temp()?)?;
+    let mut builder = SimpleBuilder::<RollupStorage>::init(&GlobalConfig::new_temp(
+        tempfile::tempdir()?.path(),
+    )?)?;
     let result = builder
         .program_path(Some(path))
         .account_with_balance(sender, Some(900000), true, true)
