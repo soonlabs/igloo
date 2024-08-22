@@ -3,7 +3,7 @@
 ## Preface
 The popularity of modular blockchains has led to a diversity of Layer 2 blockchain components, with the use of SVM as an execution layer gaining significant attention. The SVM account model decouples computation logic and state, which is highly beneficial for parallel execution. This gives SVM great potential to become a high-performance execution layer. 
 
-In this context, we introduce a high-performance rollup framework, the derivation layer is based on the Optimism design, while the SVM execution layer is based on a new SVM API proposed by Agave. We have decoupled the Solana Transaction Processing Unit (TPU) flow, making the SVM execution layer more lightweight. When combined with SIMD83, it becomes easier to achieve horizontal scaling of the Sequencer, thereby significantly increasing the transaction processing capacity.
+In this context, we introduce a high-performance rollup framework, the derivation layer is based on the Optimism design, while the SVM execution layer is based on a new SVM API proposed by Agave. We have decoupled the Solana Transaction Processing Unit (TPU) flow, making the SVM execution layer more lightweight.
 
 ## Quick start
 
