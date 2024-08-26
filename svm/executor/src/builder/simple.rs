@@ -125,7 +125,7 @@ where
             .deploy_program(buffer)
             .map_err(|e| Error::BuilderError(e.to_string()))?;
 
-        let accounts = self.prepare_accounts();
+        let accounts = self.prepare_accounts()?;
         self.tx_builder.create_instruction(
             program_id,
             accounts.accounts,
@@ -144,7 +144,7 @@ where
             self.tx_processor = Some(Arc::new(create_transaction_processor(
                 &mut self.bank,
                 self.fork_graph.clone(),
-            )));
+            )?));
         }
 
         let processing_config = self.get_processing_config();
@@ -249,12 +249,14 @@ where
         self
     }
 
-    fn prepare_accounts(&mut self) -> ExecutionAccounts {
+    fn prepare_accounts(&mut self) -> Result<ExecutionAccounts> {
         let mut accounts = vec![];
         let mut signatures = HashMap::new();
         for (meta, account) in self.accounts.iter() {
             if let Some(account) = account {
-                self.bank.insert_account(meta.pubkey, account.clone());
+                self.bank
+                    .insert_account(meta.pubkey, account.clone())
+                    .map_err(|e| Error::BuilderError(e.to_string()))?;
             }
 
             accounts.push(meta.clone());
@@ -264,11 +266,11 @@ where
             }
         }
 
-        ExecutionAccounts {
-            fee_payer: self.create_fee_payer(),
+        Ok(ExecutionAccounts {
+            fee_payer: self.create_fee_payer()?,
             accounts,
             signatures,
-        }
+        })
     }
 
     fn get_checked_tx_details(&self) -> TransactionCheckResult {
@@ -280,12 +282,14 @@ where
             }))
     }
 
-    fn create_fee_payer(&mut self) -> Pubkey {
+    fn create_fee_payer(&mut self) -> Result<Pubkey> {
         let fee_payer = Pubkey::new_unique();
         let mut account_data = AccountSharedData::default();
         account_data.set_lamports(self.settings.fee_payer_balance);
-        self.bank.insert_account(fee_payer, account_data);
-        fee_payer
+        self.bank
+            .insert_account(fee_payer, account_data)
+            .map_err(|e| Error::BuilderError(e.to_string()))?;
+        Ok(fee_payer)
     }
 
     fn read_program(&self) -> Result<Vec<u8>> {
@@ -327,7 +331,7 @@ where
 pub fn create_transaction_processor<B>(
     bank: &mut B,
     fork_graph: Arc<RwLock<MockForkGraph>>,
-) -> TransactionBatchProcessor<MockForkGraph>
+) -> Result<TransactionBatchProcessor<MockForkGraph>>
 where
     B: TransactionProcessingCallback + BankOperations + BankInfo<Slot = Slot>,
 {
@@ -341,10 +345,11 @@ where
         &mut tx_processor.program_cache.write().unwrap(),
     );
 
-    bank.set_clock();
+    bank.set_clock()
+        .map_err(|e| Error::BuilderError(e.to_string()))?;
     tx_processor.fill_missing_sysvar_cache_entries(bank);
 
     register_builtins(bank, &tx_processor);
 
-    tx_processor
+    Ok(tx_processor)
 }

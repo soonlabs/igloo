@@ -15,6 +15,9 @@ pub enum Error {
     #[error("Init config failed: {0}")]
     InitConfigFailed(String),
 
+    #[error("Keypairs config missing validator keypair")]
+    KeypairsConfigMissingValidatorKeypair,
+
     #[error(transparent)]
     SolanaBlockstoreError(#[from] BlockstoreError),
 
@@ -56,6 +59,9 @@ pub enum BankError {
 
     #[error("Bank at slot {0} not found")]
     BankNotExists(Slot),
+
+    #[error("Invalid operation in bank: {0}")]
+    InvalidOperation(String),
 }
 
 #[derive(Debug, Error)]

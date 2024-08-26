@@ -93,8 +93,9 @@ impl BankOperations for MockBankCallback {
 
     type Error = Error;
 
-    fn insert_account(&mut self, key: Pubkey, data: AccountSharedData) {
+    fn insert_account(&mut self, key: Pubkey, data: AccountSharedData) -> Result<(), Self::Error> {
         self.account_shared_data.borrow_mut().insert(key, data);
+        Ok(())
     }
 
     fn deploy_program(&mut self, mut buffer: Vec<u8>) -> Result<Pubkey, Self::Error> {
@@ -109,7 +110,7 @@ impl BankOperations for MockBankCallback {
         account_data.set_data(bincode::serialize(&state).unwrap());
         account_data.set_lamports(25);
         account_data.set_owner(bpf_loader_upgradeable::id());
-        self.insert_account(program_account, account_data);
+        self.insert_account(program_account, account_data)?;
 
         let mut account_data = AccountSharedData::default();
         let state = UpgradeableLoaderState::ProgramData {
@@ -127,12 +128,12 @@ impl BankOperations for MockBankCallback {
         header.append(&mut complement);
         header.append(&mut buffer);
         account_data.set_data(header);
-        self.insert_account(program_data_account, account_data);
+        self.insert_account(program_data_account, account_data)?;
 
         Ok(program_account)
     }
 
-    fn set_clock(&mut self) {
+    fn set_clock(&mut self) -> Result<(), Self::Error> {
         // We must fill in the sysvar cache entries
         let time_now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -148,7 +149,8 @@ impl BankOperations for MockBankCallback {
 
         let mut account_data = AccountSharedData::default();
         account_data.set_data(bincode::serialize(&clock).unwrap());
-        self.insert_account(Clock::id(), account_data);
+        self.insert_account(Clock::id(), account_data)?;
+        Ok(())
     }
 
     fn bump(&mut self) -> Result<(), Self::Error> {
@@ -164,6 +166,8 @@ impl BankInfo for MockBankCallback {
 
     type Slot = Slot;
 
+    type Error = Error;
+
     fn last_blockhash(&self) -> solana_sdk::hash::Hash {
         Default::default()
     }
@@ -172,8 +176,8 @@ impl BankInfo for MockBankCallback {
         self.execution_slot
     }
 
-    fn collector_id(&self) -> Self::Pubkey {
-        Default::default()
+    fn collector_id(&self) -> Result<Self::Pubkey, Self::Error> {
+        Ok(Default::default())
     }
 }
 

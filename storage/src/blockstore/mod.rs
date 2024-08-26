@@ -53,7 +53,12 @@ impl RollupStorage {
             self.bank.clone(),
             &self.blockstore,
             self.bank.max_tick_height(), // use max tick height here
-            &self.keypair,
+            self.config
+                .keypairs
+                .validator_keypair
+                .as_ref()
+                .ok_or(Error::KeypairsConfigMissingValidatorKeypair)?
+                .as_ref(),
         )
     }
 

@@ -15,7 +15,6 @@ use solana_sdk::{
     bpf_loader_upgradeable::{self, UpgradeableLoaderState},
     clock::Slot,
     pubkey::Pubkey,
-    signature::Keypair,
     signer::Signer,
 };
 use solana_svm::transaction_processing_callback::TransactionProcessingCallback;
@@ -31,7 +30,6 @@ pub struct RollupStorage {
     pub(crate) bank_forks: Arc<RwLock<BankForks>>,
 
     pub(crate) cluster_info: Arc<ClusterInfo>,
-    pub(crate) keypair: Arc<Keypair>,
     pub(crate) config: GlobalConfig,
     pub(crate) blockstore: Arc<Blockstore>,
     pub(crate) background_service: StorageBackground,
@@ -80,8 +78,17 @@ impl BankOperations for RollupStorage {
 
     type Error = Error;
 
-    fn insert_account(&mut self, key: Self::Pubkey, data: Self::AccountSharedData) {
-        self.bank.store_account(&key, &data);
+    fn insert_account(
+        &mut self,
+        key: Self::Pubkey,
+        data: Self::AccountSharedData,
+    ) -> Result<(), Self::Error> {
+        if self.config.dev_mode {
+            self.bank.store_account(&key, &data);
+            Ok(())
+        } else {
+            Err(BankError::InvalidOperation("Capitalization check not passed".to_string()).into())
+        }
     }
 
     fn deploy_program(&mut self, buffer: Vec<u8>) -> Result<Self::Pubkey, Self::Error> {
@@ -119,13 +126,14 @@ impl BankOperations for RollupStorage {
         Ok(program_key)
     }
 
-    fn set_clock(&mut self) {
+    fn set_clock(&mut self) -> Result<(), Self::Error> {
         // We do nothing here because there is a clock sysvar in the bank already
+        Ok(())
     }
 
     fn bump(&mut self) -> Result<(), Self::Error> {
         let slot = self.bank_forks.read().unwrap().highest_slot();
-        self.bump_slot(slot + 1);
+        self.bump_slot(slot + 1)?;
         Ok(())
     }
 }
@@ -137,6 +145,8 @@ impl BankInfo for RollupStorage {
 
     type Slot = Slot;
 
+    type Error = Error;
+
     fn last_blockhash(&self) -> Self::Hash {
         self.bank.last_blockhash()
     }
@@ -145,8 +155,14 @@ impl BankInfo for RollupStorage {
         self.bank.slot()
     }
 
-    fn collector_id(&self) -> Self::Pubkey {
-        self.keypair.pubkey()
+    fn collector_id(&self) -> Result<Self::Pubkey, Self::Error> {
+        Ok(self
+            .config
+            .keypairs
+            .validator_keypair
+            .as_ref()
+            .ok_or(Error::KeypairsConfigMissingValidatorKeypair)?
+            .pubkey())
     }
 }
 
@@ -179,8 +195,6 @@ impl StorageOperations for RollupStorage {
                 None,
             )
             .map_err(|e| BankError::SetRootFailed(e.to_string()))?;
-        self.bank.rc.accounts.accounts_db.add_root(self.bank.slot());
-        self.bank.force_flush_accounts_cache();
         Ok(())
     }
 

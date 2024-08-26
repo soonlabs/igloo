@@ -4,6 +4,7 @@ use super::txs::{create_svm_transactions, MockTransaction};
 use solana_bpf_loader_program::syscalls::create_program_runtime_environment_v1;
 use solana_compute_budget::compute_budget::ComputeBudget;
 use solana_program_runtime::loaded_programs::ProgramCacheEntry;
+use solana_sdk::transaction::SanitizedTransaction;
 use solana_svm::{
     account_loader::CheckedTransactionDetails,
     transaction_processing_callback::TransactionProcessingCallback,
@@ -24,6 +25,14 @@ use {
 pub fn process_transfers(
     store: &RollupStorage,
     transactions: &[MockTransaction],
+) -> LoadAndExecuteSanitizedTransactionsOutput {
+    let svm_transactions = create_svm_transactions(transactions);
+    process_transfers_ex(store, svm_transactions)
+}
+
+pub fn process_transfers_ex(
+    store: &RollupStorage,
+    svm_transactions: Vec<SanitizedTransaction>,
 ) -> LoadAndExecuteSanitizedTransactionsOutput {
     // PayTube default configs.
     //
@@ -70,10 +79,7 @@ pub fn process_transfers(
         ..Default::default()
     };
 
-    // 1. Convert to an SVM transaction batch.
-    let svm_transactions = create_svm_transactions(transactions);
-
-    // 2. Process transactions with the SVM API.
+    // Process transactions with the SVM API.
     processor.load_and_execute_sanitized_transactions(
         store,
         &svm_transactions,

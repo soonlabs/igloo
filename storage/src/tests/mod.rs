@@ -1,5 +1,6 @@
 mod basic;
-mod mock;
+pub mod mock;
+mod reorg;
 mod svm;
 
 fn get_program_path(name: &str) -> String {

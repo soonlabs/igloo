@@ -4,23 +4,52 @@ use solana_entry::entry::create_ticks;
 use solana_ledger::{
     blockstore::Blockstore,
     blockstore_options::{AccessType, BlockstoreOptions},
-    genesis_utils::{
-        bootstrap_validator_stake_lamports, create_genesis_config_with_leader, GenesisConfigInfo,
-    },
+    genesis_utils::GenesisConfigInfo,
     shred::{ProcessShredsStats, ReedSolomonCache, Shredder},
 };
-use solana_sdk::{genesis_config::GenesisConfig, hash::Hash, signature::Keypair};
+use solana_runtime::genesis_utils::create_genesis_config_with_leader_ex;
+use solana_sdk::{
+    fee_calculator::FeeRateGovernor,
+    genesis_config::{ClusterType, GenesisConfig},
+    hash::Hash,
+    rent::Rent,
+    signature::Keypair,
+    signer::Signer,
+};
 use std::path::Path;
 
-pub(crate) fn default_genesis_config(ledger_path: &Path) -> Result<GenesisConfig> {
-    let GenesisConfigInfo { genesis_config, .. } = create_genesis_config_with_leader(
-        1_000_000_000,
+pub(crate) const DEFAULT_VALIDATOR_LAMPORTS: u64 = 10_000_000;
+pub(crate) const DEFAULT_MINT_LAMPORTS: u64 = 1_000_000_000;
+pub(crate) const DEFAULT_STAKE_LAMPORTS: u64 = 50_000_000;
+
+pub(crate) fn default_genesis_config(ledger_path: &Path) -> Result<(GenesisConfigInfo, Keypair)> {
+    let validator_key = Keypair::new();
+    let mint_keypair = Keypair::new();
+    let voting_keypair = Keypair::new();
+    let genesis_config = create_genesis_config_with_leader_ex(
+        DEFAULT_MINT_LAMPORTS,
+        &mint_keypair.pubkey(),
+        &validator_key.pubkey(),
+        &voting_keypair.pubkey(),
         &solana_sdk::pubkey::new_rand(),
-        bootstrap_validator_stake_lamports(),
+        DEFAULT_STAKE_LAMPORTS,
+        DEFAULT_VALIDATOR_LAMPORTS,
+        FeeRateGovernor::new(0, 0), // most tests can't handle transaction fees
+        Rent::free(),               // most tests don't expect rent
+        ClusterType::Development,
+        vec![],
     );
     init_block_store(ledger_path, &genesis_config)?;
 
-    Ok(genesis_config)
+    Ok((
+        GenesisConfigInfo {
+            genesis_config,
+            mint_keypair,
+            voting_keypair,
+            validator_pubkey: validator_key.pubkey(),
+        },
+        validator_key,
+    ))
 }
 
 fn init_block_store(ledger_path: &Path, genesis_config: &GenesisConfig) -> Result<()> {

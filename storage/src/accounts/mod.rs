@@ -1,6 +1,7 @@
 use rollups_interface::l2::{bank::BankInfo, storage::TransactionSet};
 use solana_runtime::{
     bank::{Bank, ExecutedTransactionCounts, NewBankOptions, TotalAccountsStats},
+    installed_scheduler_pool::BankWithScheduler,
     snapshot_bank_utils,
     snapshot_utils::ArchiveFormat,
 };
@@ -11,6 +12,7 @@ use solana_sdk::{
     transaction::SanitizedTransaction,
 };
 use solana_svm::transaction_processor::LoadAndExecuteSanitizedTransactionsOutput;
+use std::sync::Arc;
 
 use crate::{
     blockstore::txs::CommitBatch,
@@ -18,6 +20,9 @@ use crate::{
     execution::TransactionsResultWrapper,
     Result, RollupStorage,
 };
+
+#[cfg(test)]
+mod tests;
 
 impl RollupStorage {
     pub fn all_accounts_status(&self) -> Result<TotalAccountsStats> {
@@ -69,10 +74,22 @@ impl RollupStorage {
         Ok(())
     }
 
-    pub fn bump_slot(&mut self, slot: Slot) {
+    pub fn current_bank(&self) -> Arc<Bank> {
+        self.bank.clone()
+    }
+
+    pub fn bump_slot(&mut self, slot: Slot) -> Result<BankWithScheduler> {
+        self.new_slot_with_parent(self.bank.clone(), slot)
+    }
+
+    pub fn new_slot_with_parent(
+        &mut self,
+        parent: Arc<Bank>,
+        slot: Slot,
+    ) -> Result<BankWithScheduler> {
         let new = Bank::new_from_parent_with_options(
-            self.bank.clone(),
-            &self.collector_id(),
+            parent,
+            &self.collector_id()?,
             slot,
             NewBankOptions {
                 vote_only_bank: false,
@@ -80,6 +97,7 @@ impl RollupStorage {
         );
         let new = self.bank_forks.write().unwrap().insert(new);
         self.bank = new.clone();
+        Ok(new)
     }
 
     pub(crate) fn bank_commit(

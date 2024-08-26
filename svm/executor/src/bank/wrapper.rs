@@ -55,8 +55,9 @@ impl BankOperations for BankWrapper {
     type AccountSharedData = AccountSharedData;
     type Error = Error;
 
-    fn insert_account(&mut self, key: Pubkey, data: AccountSharedData) {
+    fn insert_account(&mut self, key: Pubkey, data: AccountSharedData) -> Result<()> {
         self.bank.store_account(&key, &data);
+        Ok(())
     }
 
     fn deploy_program(&mut self, buffer: Vec<u8>) -> Result<Pubkey> {
@@ -94,8 +95,9 @@ impl BankOperations for BankWrapper {
         Ok(program_key)
     }
 
-    fn set_clock(&mut self) {
+    fn set_clock(&mut self) -> Result<()> {
         // We do nothing here because there is a clock sysvar in the bank already
+        Ok(())
     }
 
     fn bump(&mut self) -> Result<()> {
@@ -108,6 +110,7 @@ impl BankInfo for BankWrapper {
     type Hash = Hash;
     type Pubkey = Pubkey;
     type Slot = Slot;
+    type Error = Error;
 
     fn last_blockhash(&self) -> Hash {
         self.bank.last_blockhash()
@@ -117,8 +120,8 @@ impl BankInfo for BankWrapper {
         self.bank.slot()
     }
 
-    fn collector_id(&self) -> Pubkey {
-        self.validator_pubkey
+    fn collector_id(&self) -> std::result::Result<Self::Pubkey, Self::Error> {
+        Ok(self.validator_pubkey)
     }
 }
 

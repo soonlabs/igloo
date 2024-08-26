@@ -1,6 +1,6 @@
 use crate::{
     background::StorageBackground,
-    config::{GlobalConfig, StorageConfig},
+    config::{GlobalConfig, KeypairsConfig, StorageConfig},
     sig_hub::SignalHub,
     Error, Result, RollupStorage,
 };
@@ -17,11 +17,9 @@ use solana_ledger::{
 };
 use solana_runtime::{
     accounts_background_service::AccountsBackgroundService, bank_forks::BankForks,
-    snapshot_hash::StartingSnapshotHashes,
+    snapshot_config::SnapshotConfig, snapshot_hash::StartingSnapshotHashes,
 };
-use solana_sdk::{
-    genesis_config::GenesisConfig, signature::Keypair, signer::Signer, timing::timestamp,
-};
+use solana_sdk::{signature::Keypair, signer::Signer, timing::timestamp};
 use solana_streamer::socket::SocketAddrSpace;
 use std::{
     path::{Path, PathBuf},
@@ -36,18 +34,22 @@ impl RollupStorage {
     pub fn new(mut config: GlobalConfig) -> Result<Self> {
         let exit = Arc::new(AtomicBool::new(false));
         let (
-            genesis_config,
             bank_forks,
             blockstore,
             leader_schedule_cache,
             starting_snapshot_hashes,
             process_options,
             mut hub,
-        ) = load_blockstore(&config, exit.clone(), SignalHub::default())?;
-        config.genesis = genesis_config;
+        ) = load_blockstore(&mut config, exit.clone(), SignalHub::default())?;
 
-        let keypair = Arc::new(Keypair::new());
-        let cluster_info = create_cluster_info(keypair.clone());
+        let cluster_info = localhost_cluster_info(
+            config
+                .keypairs
+                .validator_keypair
+                .as_ref()
+                .ok_or(Error::KeypairsConfigMissingValidatorKeypair)?
+                .clone(),
+        );
 
         let background_service = StorageBackground::new(
             bank_forks.clone(),
@@ -67,7 +69,6 @@ impl RollupStorage {
             blockstore,
             background_service,
             leader_schedule_cache: Arc::new(leader_schedule_cache),
-            keypair,
             cluster_info,
             process_options,
         })
@@ -103,19 +104,29 @@ pub(crate) fn init_config(ledger_path: &Path) -> Result<StorageConfig> {
             Error::InitConfigFailed(format!("Create all accounts run and snapshot dirs: {err}"))
         })?;
 
+    let bank_snapshots_dir = ledger_path.join("snapshots");
+    let snapshot_config = SnapshotConfig {
+        full_snapshot_archive_interval_slots: 2500,
+        incremental_snapshot_archive_interval_slots: 500,
+        full_snapshot_archives_dir: bank_snapshots_dir.join("full"),
+        incremental_snapshot_archives_dir: bank_snapshots_dir.join("incremental"),
+        bank_snapshots_dir,
+        ..Default::default()
+    };
+
     Ok(StorageConfig {
         accounts_db_config: Some(accounts_db_config),
         account_paths: account_run_paths,
+        snapshot_config,
         ..Default::default()
     })
 }
 
 fn load_blockstore(
-    cfg: &GlobalConfig,
+    cfg: &mut GlobalConfig,
     exit: Arc<AtomicBool>,
     mut hub: SignalHub,
 ) -> Result<(
-    GenesisConfig,
     Arc<RwLock<BankForks>>,
     Arc<Blockstore>,
     LeaderScheduleCache,
@@ -131,7 +142,14 @@ fn load_blockstore(
             Ok(genesis_config) => Ok(genesis_config),
             Err(err) => {
                 if cfg.allow_default_genesis {
-                    Ok(default_genesis_config(&cfg.ledger_path)?)
+                    let (genesis_config, keypair) = default_genesis_config(&cfg.ledger_path)?;
+                    cfg.keypairs = KeypairsConfig {
+                        validator_keypair: Some(Arc::new(keypair)),
+                        mint_keypair: Some(Arc::new(genesis_config.mint_keypair)),
+                        voting_keypair: Some(Arc::new(genesis_config.voting_keypair)),
+                        ..Default::default()
+                    };
+                    Ok(genesis_config.genesis_config)
                 } else {
                     Err(Error::LoadBlockstoreFailed(format!(
                         "Failed to open genesis config: {err}"
@@ -139,6 +157,7 @@ fn load_blockstore(
                 }
             }
         }?;
+    cfg.keypairs.init()?;
 
     let genesis_hash = genesis_config.hash();
     info!("genesis hash: {}", genesis_hash);
@@ -213,8 +232,8 @@ fn load_blockstore(
         bank_forks.set_accounts_hash_interval_slots(config.accounts_hash_interval_slots);
     }
 
+    cfg.genesis = genesis_config;
     Ok((
-        genesis_config,
         bank_forks,
         blockstore,
         leader_schedule_cache,
@@ -233,13 +252,10 @@ fn blockstore_options_from_config(config: &StorageConfig) -> BlockstoreOptions {
     }
 }
 
-fn create_cluster_info(keypair: Arc<Keypair>) -> Arc<ClusterInfo> {
-    let contract_info = ContactInfo::new(keypair.pubkey(), timestamp(), Default::default());
-    let cluster_info = ClusterInfo::new(contract_info, keypair, SocketAddrSpace::new(false));
-    // TDOO: init cluster later
-    // cluster_info.set_contact_debug_interval(..);
-    // cluster_info.set_entrypoints(..);
-    // cluster_info.restore_contact_info(..);
-
-    Arc::new(cluster_info)
+pub(crate) fn localhost_cluster_info(keypair: Arc<Keypair>) -> Arc<ClusterInfo> {
+    Arc::new(ClusterInfo::new(
+        ContactInfo::new_localhost(&keypair.pubkey(), timestamp()),
+        keypair,
+        SocketAddrSpace::Unspecified,
+    ))
 }

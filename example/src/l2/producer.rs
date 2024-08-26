@@ -60,7 +60,7 @@ impl SvmProducer {
     pub fn new(base_path: &Path, ledger: SharedLedger) -> anyhow::Result<Self> {
         let mut bank = BankWrapper::new_with_path(base_path, 4, &Default::default())?;
         let fork_graph = Arc::new(RwLock::new(fork_graph::MockForkGraph::default()));
-        let tx_processor = Arc::new(create_transaction_processor(&mut bank, fork_graph.clone()));
+        let tx_processor = Arc::new(create_transaction_processor(&mut bank, fork_graph.clone())?);
         let system_account = Pubkey::from([0u8; 32]);
         Ok(Self {
             ledger,

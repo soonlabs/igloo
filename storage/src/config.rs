@@ -15,7 +15,10 @@ use solana_ledger::{
     use_snapshot_archives_at_startup::UseSnapshotArchivesAtStartup,
 };
 use solana_runtime::snapshot_config::SnapshotConfig;
-use solana_sdk::{clock::Slot, genesis_config::GenesisConfig, hash::Hash, pubkey::Pubkey};
+use solana_sdk::{
+    clock::Slot, genesis_config::GenesisConfig, hash::Hash, pubkey::Pubkey, signature::Keypair,
+    signer::EncodableKey,
+};
 use solana_svm::runtime_config::RuntimeConfig;
 
 use crate::{init::init_config, Result};
@@ -26,8 +29,20 @@ pub const MAX_GENESIS_ARCHIVE_UNPACKED_SIZE: u64 = 10 * 1024 * 1024; // 10 MiB
 pub struct GlobalConfig {
     pub ledger_path: PathBuf,
     pub allow_default_genesis: bool,
+    pub dev_mode: bool,
+    pub keypairs: KeypairsConfig,
     pub storage: StorageConfig,
     pub genesis: GenesisConfig,
+}
+
+#[derive(Default, Clone)]
+pub struct KeypairsConfig {
+    pub validator_key_path: Option<PathBuf>,
+    pub validator_keypair: Option<Arc<Keypair>>,
+    pub mint_key_path: Option<PathBuf>,
+    pub mint_keypair: Option<Arc<Keypair>>,
+    pub voting_key_path: Option<PathBuf>,
+    pub voting_keypair: Option<Arc<Keypair>>,
 }
 
 impl Config for GlobalConfig {}
@@ -49,6 +64,17 @@ impl GlobalConfig {
             ledger_path: ledger_path.to_path_buf(),
             storage,
             allow_default_genesis: true,
+            ..Default::default()
+        })
+    }
+
+    pub fn new_dev(ledger_path: &Path) -> Result<Self> {
+        let storage = init_config(&ledger_path)?;
+        Ok(Self {
+            ledger_path: ledger_path.to_path_buf(),
+            storage,
+            allow_default_genesis: true,
+            dev_mode: true,
             ..Default::default()
         })
     }
@@ -104,5 +130,35 @@ impl Default for StorageConfig {
             runtime_config: RuntimeConfig::default(),
             use_snapshot_archives_at_startup: UseSnapshotArchivesAtStartup::default(),
         }
+    }
+}
+
+impl KeypairsConfig {
+    pub fn init(&mut self) -> crate::Result<()> {
+        Self::try_init(
+            &mut self.validator_keypair,
+            self.validator_key_path.as_ref(),
+        )?;
+        Self::try_init(&mut self.mint_keypair, self.mint_key_path.as_ref())?;
+        Self::try_init(&mut self.voting_keypair, self.voting_key_path.as_ref())?;
+        Ok(())
+    }
+
+    fn try_init(source: &mut Option<Arc<Keypair>>, path: Option<&PathBuf>) -> crate::Result<()> {
+        if source.is_some() {
+            return Ok(());
+        }
+        if let Some(path) = path {
+            let keypair = Self::init_from_file(path)?;
+            *source = Some(Arc::new(keypair));
+        }
+        Ok(())
+    }
+
+    fn init_from_file(path: &Path) -> crate::Result<Keypair> {
+        let keypair = Keypair::read_from_file(path).map_err(|e| {
+            crate::Error::InitCommon(format!("failed to read validator keypair: {e}").to_string())
+        })?;
+        Ok(keypair)
     }
 }

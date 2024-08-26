@@ -2,6 +2,9 @@ use rollups_interface::l2::storage::TransactionsResult;
 use solana_sdk::transaction::{SanitizedTransaction, VersionedTransaction};
 use solana_svm::transaction_processor::LoadAndExecuteSanitizedTransactionsOutput;
 
+#[cfg(test)]
+mod tests;
+
 pub struct TransactionsResultWrapper {
     pub output: LoadAndExecuteSanitizedTransactionsOutput,
 }
