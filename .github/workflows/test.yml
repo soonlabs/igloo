@@ -1,0 +1,68 @@
+name: Rust CI - Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  Test:
+    runs-on: soon-runtime-spot
+    permissions:
+      id-token: write   # This is required for requesting the JWT
+      contents: read    # This is required for actions/checkout
+    if: always() && ((github.event_name == 'pull_request' && (github.base_ref == 'main' || github.base_ref == 'dev')) || (github.event_name == 'push' && (format('refs/heads/{0}', 'main') == github.ref || format('refs/heads/{0}', 'dev') == github.ref)))
+    steps:
+      - name: Check Env
+        run: |
+          printenv
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Check
+        run: |
+          ls
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - name: Install Packages
+        uses: ConorMacBride/install-package@v1
+        with:
+          apt: >-
+            pkg-config
+            build-essential
+            libssl-dev
+            clang
+            libclang-dev
+      - name: Install solana tools
+        run: |
+          curl -L https://github.com/solana-labs/solana/releases/download/v1.18.18/solana-release-x86_64-unknown-linux-gnu.tar.bz2 -O
+          tar -xvjf solana-release-x86_64-unknown-linux-gnu.tar.bz2 -C ./
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.SOON_GITHUB_TOKEN }}
+      - name: Cache cargo registry
+        uses: actions/cache@v2
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-registry-
+      - name: Cache cargo build
+        uses: actions/cache@v2
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-build-
+      - name: Run tests
+        run: |-
+          export PATH="./solana-release/bin:$PATH"
+          which solana-keygen
+          make test
+        working-directory: "./"

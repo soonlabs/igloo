@@ -1,0 +1,87 @@
+name: Rust CI - Build
+
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+    inputs:
+      node:
+        description: 'what to build?'
+        type: choice
+        options:
+          - all
+          - sequencer
+          - validator
+        default: all
+      release_type:
+        description: 'type of release (major|minor|hotfix)?'
+        type: choice
+        options:
+          - major
+          - minor
+          - hotfix
+        default: minor
+      push:
+        description: 'push image?'
+        required: true
+        type: boolean
+        default: false
+
+jobs:
+  Build:
+    runs-on: soon-runtime-spot
+    permissions:
+      id-token: write # This is required for requesting the JWT
+      contents: read # This is required for actions/checkout
+      packages: write # This is required for pushing to github registry
+    strategy:
+      matrix:
+        node:
+          - igloo
+    if: always() && (github.event_name == 'workflow_dispatch' || github.ref == 'tag')
+    steps:
+      - name: Check Env
+        run: |
+          printenv
+        if: (github.event_name == 'workflow_dispatch' && (matrix.node == github.event.inputs.node || github.event.inputs.node == 'all')) || github.ref_type == 'tag'
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          path: soon
+        if: (github.event_name == 'workflow_dispatch' && (matrix.node == github.event.inputs.node || github.event.inputs.node == 'all')) || github.ref_type == 'tag'
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+        if: (github.event_name == 'workflow_dispatch' && (matrix.node == github.event.inputs.node || github.event.inputs.node == 'all')) || github.ref_type == 'tag'
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        if: (github.event_name == 'workflow_dispatch' && (matrix.node == github.event.inputs.node || github.event.inputs.node == 'all')) || github.ref_type == 'tag'
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+        if: (github.event_name == 'workflow_dispatch' && (matrix.node == github.event.inputs.node || github.event.inputs.node == 'all')) || github.ref_type == 'tag'
+      - name: Build Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: "{{ defaultContext }}:./"
+          file: "./Dockerfile"
+          push: ${{ github.event.inputs.push }}
+          platforms: linux/amd64
+          tags: "ghcr.io/${{ github.repository }}/${{ matrix.node }}:${{ github.sha }}"
+          build-args: |-
+            PROFILE=debug
+        if: github.event_name == 'workflow_dispatch' && (matrix.node == github.event.inputs.node || github.event.inputs.node == 'all')
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: "{{ defaultContext }}:./"
+          file: "./Dockerfile"
+          push: true
+          platforms: linux/amd64
+          build-args: |-
+            PROFILE=release
+          tags: "ghcr.io/${{ github.repository }}/${{ matrix.node }}:${{ github.ref_name }}"
+        if: github.ref_type == 'tag'
