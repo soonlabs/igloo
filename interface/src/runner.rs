@@ -4,7 +4,7 @@ use crate::{
 };
 
 pub trait Runner<E: Engine, ID: InstantDerive, DD: DaDerive> {
-    type Error;
+    type Error: std::fmt::Display;
 
     fn register_instant(&mut self, derive: ID);
 

@@ -1,5 +1,4 @@
-use std::env;
-
+use anyhow::Result;
 use rollups_interface::l2::executor::Init;
 use solana_sdk::{
     account::ReadableAccount, clock::Clock, pubkey::Pubkey, sysvar::SysvarId,
@@ -9,22 +8,16 @@ use solana_svm::{
     transaction_processing_callback::TransactionProcessingCallback,
     transaction_results::TransactionExecutionResult,
 };
+use svm_executor::prelude::SimpleBuilder;
 
-use crate::{mock::bank::MockBankCallback, prelude::SimpleBuilder};
-
-fn get_program_path(name: &str) -> String {
-    let mut dir = env::current_dir().unwrap();
-    dir.push("tests");
-    let name = name.replace('-', "_");
-    dir.push(name + "_program.so");
-    dir.to_str().unwrap().to_string()
-}
+use crate::{config::GlobalConfig, tests::get_program_path, RollupStorage};
 
 #[test]
-fn hello_program_works() {
+fn db_hello_program_works() -> Result<()> {
     let path = get_program_path("hello-solana");
 
-    let mut builder = SimpleBuilder::<MockBankCallback>::init(&Default::default()).unwrap();
+    let mut builder =
+        SimpleBuilder::<RollupStorage>::init(&GlobalConfig::new_dev(tempfile::tempdir()?.path())?)?;
     let result = builder
         .program_path(Some(path))
         .build()
@@ -43,13 +36,15 @@ fn hello_program_works() {
         .as_ref()
         .unwrap();
     assert!(logs.contains(&"Program log: Hello, Solana!".to_string()));
+    Ok(())
 }
 
 #[test]
-fn clock_sysvar_works() {
+fn db_clock_sysvar_works() -> Result<()> {
     let path = get_program_path("clock-sysvar");
 
-    let mut builder = SimpleBuilder::<MockBankCallback>::init(&Default::default()).unwrap();
+    let mut builder =
+        SimpleBuilder::<RollupStorage>::init(&GlobalConfig::new_dev(tempfile::tempdir()?.path())?)?;
     let result = builder
         .program_path(Some(path))
         .build()
@@ -74,17 +69,19 @@ fn clock_sysvar_works() {
         .unwrap();
     let clock_info: Clock = bincode::deserialize(clock_data.data()).unwrap();
     assert_eq!(clock_info.unix_timestamp, time);
+    Ok(())
 }
 
 #[test]
-fn simple_transfer_works() {
+fn db_simple_transfer_works() -> Result<()> {
     let path = get_program_path("simple-transfer");
     let sender = Pubkey::new_unique();
     let recipient = Pubkey::new_unique();
     let system_account = Pubkey::from([0u8; 32]);
     println!("system_account: {}", system_account);
 
-    let mut builder = SimpleBuilder::<MockBankCallback>::init(&Default::default()).unwrap();
+    let mut builder =
+        SimpleBuilder::<RollupStorage>::init(&GlobalConfig::new_dev(tempfile::tempdir()?.path())?)?;
     let result = builder
         .program_path(Some(path))
         .account_with_balance(sender, Some(900000), true, true)
@@ -109,16 +106,18 @@ fn simple_transfer_works() {
         .find(|key| key.0 == recipient)
         .unwrap();
     assert_eq!(recipient_data.1.lamports(), 900010);
+    Ok(())
 }
 
 #[test]
-fn simple_transfer_failed_with_insufficient_balance() {
+fn db_simple_transfer_failed_with_insufficient_balance() -> Result<()> {
     let path = get_program_path("simple-transfer");
     let sender = Pubkey::new_unique();
     let recipient = Pubkey::new_unique();
     let system_account = Pubkey::from([0u8; 32]);
 
-    let mut builder = SimpleBuilder::<MockBankCallback>::init(&Default::default()).unwrap();
+    let mut builder =
+        SimpleBuilder::<RollupStorage>::init(&GlobalConfig::new_dev(tempfile::tempdir()?.path())?)?;
     let result = builder
         .program_path(Some(path))
         .account_with_balance(sender, Some(900000), true, true)
@@ -142,16 +141,18 @@ fn simple_transfer_failed_with_insufficient_balance() {
         .as_ref()
         .unwrap()
         .contains(&"Transfer: insufficient lamports 900000, need 900050".to_string()));
+    Ok(())
 }
 
 #[test]
-fn simple_transfer_failed_with_custom_check_error() {
+fn db_simple_transfer_failed_with_custom_check_error() -> Result<()> {
     let path = get_program_path("simple-transfer");
     let sender = Pubkey::new_unique();
     let recipient = Pubkey::new_unique();
     let system_account = Pubkey::from([0u8; 32]);
 
-    let mut builder = SimpleBuilder::<MockBankCallback>::init(&Default::default()).unwrap();
+    let mut builder =
+        SimpleBuilder::<RollupStorage>::init(&GlobalConfig::new_dev(tempfile::tempdir()?.path())?)?;
     let result = builder
         .program_path(Some(path))
         .account_with_balance(sender, Some(900000), true, true)
@@ -168,4 +169,5 @@ fn simple_transfer_failed_with_custom_check_error() {
         result.execution_results[0],
         TransactionExecutionResult::NotExecuted(TransactionError::BlockhashNotFound)
     ));
+    Ok(())
 }

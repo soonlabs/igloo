@@ -4,6 +4,9 @@ use tokio::sync::RwLock;
 
 use crate::l1::PayloadAttribute;
 
+pub mod bank;
+pub mod executor;
+pub mod storage;
 pub mod stream;
 
 pub trait Transaction {
@@ -35,7 +38,7 @@ pub trait Entry {
 pub trait Producer {
     type Attribute: PayloadAttribute;
     type BlockPayload: BlockPayload;
-    type Error;
+    type Error: std::fmt::Display;
 
     async fn produce(&self, attribute: Self::Attribute) -> Result<Self::BlockPayload, Self::Error>;
 }
@@ -68,7 +71,7 @@ pub trait Engine: EngineApi<Self::Block, Self::Head> {
 }
 
 pub trait EngineApi<B: Block, H: L2Head> {
-    type Error;
+    type Error: std::fmt::Display;
 
     async fn new_block(&mut self, block: B) -> Result<H, Self::Error>;
 

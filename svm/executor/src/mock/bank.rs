@@ -1,12 +1,16 @@
 use {
     crate::{
-        bank::{BankInfo, BankOperations},
         env::{DEPLOYMENT_EPOCH, DEPLOYMENT_SLOT},
+        error::Error,
+    },
+    rollups_interface::l2::{
+        bank::{BankInfo, BankOperations},
+        executor::{Config, Init},
     },
     solana_sdk::{
         account::{AccountSharedData, ReadableAccount, WritableAccount},
         bpf_loader_upgradeable::{self, UpgradeableLoaderState},
-        clock::{Clock, UnixTimestamp},
+        clock::{Clock, Slot, UnixTimestamp},
         feature_set::FeatureSet,
         native_loader,
         pubkey::Pubkey,
@@ -21,12 +25,16 @@ use {
     },
 };
 
+#[derive(Default)]
+pub struct MockConfig {}
+
+impl Config for MockConfig {}
+
 pub struct MockBankCallback {
     pub feature_set: Arc<FeatureSet>,
     pub account_shared_data: RefCell<HashMap<Pubkey, AccountSharedData>>,
 
     pub execution_slot: u64, // The execution slot must be greater than the deployment slot
-    pub execution_epoch: u64, // The execution epoch must be greater than the deployment epoch
 }
 
 impl Default for MockBankCallback {
@@ -35,8 +43,20 @@ impl Default for MockBankCallback {
             feature_set: Default::default(),
             account_shared_data: Default::default(),
             execution_slot: 5,
-            execution_epoch: 2,
         }
+    }
+}
+
+impl Init for MockBankCallback {
+    type Error = Error;
+
+    type Config = MockConfig;
+
+    fn init(_cfg: &Self::Config) -> Result<Self, Self::Error>
+    where
+        Self: Sized,
+    {
+        Ok(Default::default())
     }
 }
 
@@ -67,11 +87,18 @@ impl TransactionProcessingCallback for MockBankCallback {
 }
 
 impl BankOperations for MockBankCallback {
-    fn insert_account(&mut self, key: Pubkey, data: AccountSharedData) {
+    type Pubkey = Pubkey;
+
+    type AccountSharedData = AccountSharedData;
+
+    type Error = Error;
+
+    fn insert_account(&mut self, key: Pubkey, data: AccountSharedData) -> Result<(), Self::Error> {
         self.account_shared_data.borrow_mut().insert(key, data);
+        Ok(())
     }
 
-    fn deploy_program(&mut self, mut buffer: Vec<u8>) -> Pubkey {
+    fn deploy_program(&mut self, mut buffer: Vec<u8>) -> Result<Pubkey, Self::Error> {
         let program_account = Pubkey::new_unique();
         let program_data_account = Pubkey::new_unique();
         let state = UpgradeableLoaderState::Program {
@@ -83,7 +110,7 @@ impl BankOperations for MockBankCallback {
         account_data.set_data(bincode::serialize(&state).unwrap());
         account_data.set_lamports(25);
         account_data.set_owner(bpf_loader_upgradeable::id());
-        self.insert_account(program_account, account_data);
+        self.insert_account(program_account, account_data)?;
 
         let mut account_data = AccountSharedData::default();
         let state = UpgradeableLoaderState::ProgramData {
@@ -101,12 +128,12 @@ impl BankOperations for MockBankCallback {
         header.append(&mut complement);
         header.append(&mut buffer);
         account_data.set_data(header);
-        self.insert_account(program_data_account, account_data);
+        self.insert_account(program_data_account, account_data)?;
 
-        program_account
+        Ok(program_account)
     }
 
-    fn set_clock(&mut self) {
+    fn set_clock(&mut self) -> Result<(), Self::Error> {
         // We must fill in the sysvar cache entries
         let time_now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -122,11 +149,25 @@ impl BankOperations for MockBankCallback {
 
         let mut account_data = AccountSharedData::default();
         account_data.set_data(bincode::serialize(&clock).unwrap());
-        self.insert_account(Clock::id(), account_data);
+        self.insert_account(Clock::id(), account_data)?;
+        Ok(())
+    }
+
+    fn bump(&mut self) -> Result<(), Self::Error> {
+        // do nothing by default
+        Ok(())
     }
 }
 
 impl BankInfo for MockBankCallback {
+    type Hash = solana_sdk::hash::Hash;
+
+    type Pubkey = Pubkey;
+
+    type Slot = Slot;
+
+    type Error = Error;
+
     fn last_blockhash(&self) -> solana_sdk::hash::Hash {
         Default::default()
     }
@@ -135,8 +176,8 @@ impl BankInfo for MockBankCallback {
         self.execution_slot
     }
 
-    fn execution_epoch(&self) -> u64 {
-        self.execution_epoch
+    fn collector_id(&self) -> Result<Self::Pubkey, Self::Error> {
+        Ok(Default::default())
     }
 }
 

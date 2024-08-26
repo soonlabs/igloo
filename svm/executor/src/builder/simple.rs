@@ -5,8 +5,14 @@ use std::{
     sync::{Arc, RwLock},
 };
 
+use rollups_interface::l2::{
+    bank::{BankInfo, BankOperations},
+    executor::{Config, Init},
+};
 use solana_sdk::{
     account::{AccountSharedData, WritableAccount},
+    clock::Slot,
+    hash::Hash,
     instruction::AccountMeta,
     pubkey::Pubkey,
     signature::Signature,
@@ -22,12 +28,8 @@ use solana_svm::{
 };
 
 use crate::{
-    bank::{BankInfo, BankOperations},
-    builtin::register_builtins,
-    env::create_executable_environment,
-    mock::fork_graph::MockForkGraph,
-    prelude::*,
-    transaction::builder::SanitizedTransactionBuilder,
+    builtin::register_builtins, env::create_executable_environment,
+    mock::fork_graph::MockForkGraph, prelude::*, transaction::builder::SanitizedTransactionBuilder,
 };
 
 pub struct Settings {
@@ -40,8 +42,7 @@ pub struct ExecutionAccounts {
     pub signatures: HashMap<Pubkey, Signature>,
 }
 
-#[derive(Default)]
-pub struct SimpleBuilder<B: TransactionProcessingCallback + BankOperations + Default> {
+pub struct SimpleBuilder<B: TransactionProcessingCallback + BankOperations + BankInfo> {
     bank: B,
     settings: Settings,
     tx_builder: SanitizedTransactionBuilder,
@@ -65,9 +66,43 @@ impl Default for Settings {
     }
 }
 
+impl<B, C> Init for SimpleBuilder<B>
+where
+    B: TransactionProcessingCallback
+        + BankOperations<Pubkey = Pubkey, AccountSharedData = AccountSharedData>
+        + BankInfo<Hash = Hash, Pubkey = Pubkey, Slot = Slot>
+        + Init<Config = C>,
+    C: Config,
+{
+    type Error = Error;
+    type Config = C;
+
+    fn init(cfg: &Self::Config) -> std::result::Result<Self, Self::Error>
+    where
+        Self: Sized,
+    {
+        let bank = B::init(cfg).map_err(|e| Error::BuilderError(e.to_string()))?;
+        Ok(Self {
+            bank,
+            settings: Default::default(),
+            tx_builder: Default::default(),
+            tx_processor: Default::default(),
+            fork_graph: Default::default(),
+            program_path: Default::default(),
+            program_buffer: Default::default(),
+            calldata: Default::default(),
+            accounts: Default::default(),
+            v0_message: Default::default(),
+            check_result: Default::default(),
+        })
+    }
+}
+
 impl<B> SimpleBuilder<B>
 where
-    B: TransactionProcessingCallback + BankOperations + BankInfo + Default,
+    B: TransactionProcessingCallback
+        + BankOperations<Pubkey = Pubkey, AccountSharedData = AccountSharedData>
+        + BankInfo<Hash = Hash, Pubkey = Pubkey, Slot = Slot>,
 {
     pub fn build(&mut self) -> Result<LoadAndExecuteSanitizedTransactionsOutput> {
         let (result, _) = self.build_ex()?;
@@ -80,10 +115,17 @@ where
         LoadAndExecuteSanitizedTransactionsOutput,
         VersionedTransaction,
     )> {
-        let buffer = self.read_program()?;
-        let program_id = self.bank.deploy_program(buffer);
+        self.bank
+            .bump()
+            .map_err(|e| Error::BuilderError(e.to_string()))?;
 
-        let accounts = self.prepare_accounts();
+        let buffer = self.read_program()?;
+        let program_id = self
+            .bank
+            .deploy_program(buffer)
+            .map_err(|e| Error::BuilderError(e.to_string()))?;
+
+        let accounts = self.prepare_accounts()?;
         self.tx_builder.create_instruction(
             program_id,
             accounts.accounts,
@@ -102,7 +144,7 @@ where
             self.tx_processor = Some(Arc::new(create_transaction_processor(
                 &mut self.bank,
                 self.fork_graph.clone(),
-            )));
+            )?));
         }
 
         let processing_config = self.get_processing_config();
@@ -207,12 +249,14 @@ where
         self
     }
 
-    fn prepare_accounts(&mut self) -> ExecutionAccounts {
+    fn prepare_accounts(&mut self) -> Result<ExecutionAccounts> {
         let mut accounts = vec![];
         let mut signatures = HashMap::new();
         for (meta, account) in self.accounts.iter() {
             if let Some(account) = account {
-                self.bank.insert_account(meta.pubkey, account.clone());
+                self.bank
+                    .insert_account(meta.pubkey, account.clone())
+                    .map_err(|e| Error::BuilderError(e.to_string()))?;
             }
 
             accounts.push(meta.clone());
@@ -222,11 +266,11 @@ where
             }
         }
 
-        ExecutionAccounts {
-            fee_payer: self.create_fee_payer(),
+        Ok(ExecutionAccounts {
+            fee_payer: self.create_fee_payer()?,
             accounts,
             signatures,
-        }
+        })
     }
 
     fn get_checked_tx_details(&self) -> TransactionCheckResult {
@@ -238,12 +282,14 @@ where
             }))
     }
 
-    fn create_fee_payer(&mut self) -> Pubkey {
+    fn create_fee_payer(&mut self) -> Result<Pubkey> {
         let fee_payer = Pubkey::new_unique();
         let mut account_data = AccountSharedData::default();
         account_data.set_lamports(self.settings.fee_payer_balance);
-        self.bank.insert_account(fee_payer, account_data);
-        fee_payer
+        self.bank
+            .insert_account(fee_payer, account_data)
+            .map_err(|e| Error::BuilderError(e.to_string()))?;
+        Ok(fee_payer)
     }
 
     fn read_program(&self) -> Result<Vec<u8>> {
@@ -285,13 +331,13 @@ where
 pub fn create_transaction_processor<B>(
     bank: &mut B,
     fork_graph: Arc<RwLock<MockForkGraph>>,
-) -> TransactionBatchProcessor<MockForkGraph>
+) -> Result<TransactionBatchProcessor<MockForkGraph>>
 where
-    B: TransactionProcessingCallback + BankOperations + BankInfo + Default,
+    B: TransactionProcessingCallback + BankOperations + BankInfo<Slot = Slot>,
 {
     let tx_processor = TransactionBatchProcessor::<MockForkGraph>::new(
         bank.execution_slot(),
-        bank.execution_epoch(),
+        0, // always set epoch to 0
         HashSet::new(),
     );
     create_executable_environment(
@@ -299,10 +345,11 @@ where
         &mut tx_processor.program_cache.write().unwrap(),
     );
 
-    bank.set_clock();
+    bank.set_clock()
+        .map_err(|e| Error::BuilderError(e.to_string()))?;
     tx_processor.fill_missing_sysvar_cache_entries(bank);
 
     register_builtins(bank, &tx_processor);
 
-    tx_processor
+    Ok(tx_processor)
 }
