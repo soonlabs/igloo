@@ -1,4 +1,13 @@
-# Igloo
+<h1 align="center">
+    Igloo
+</h1>
+
+<p align="center">
+  <a href="https://github.com/soonlabs/igloo/actions/workflows/test.yml">
+    <img src="https://github.com/soonlabs/igloo/actions/workflows/test.yml/badge.svg" alt="Ci">
+  </a>
+  <img src="https://img.shields.io/badge/License-MIT-green.svg?label=license" alt="License">
+</p>
 
 ## Preface
 The popularity of modular blockchains has led to a diversity of Layer 2 blockchain components, with the use of SVM as an execution layer gaining significant attention. The SVM account model decouples computation logic and state, which is highly beneficial for parallel execution. This gives SVM great potential to become a high-performance execution layer. 
