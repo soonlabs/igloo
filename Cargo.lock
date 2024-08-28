@@ -3962,6 +3962,7 @@ name = "rollups-storage"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "assert_matches",
  "bincode",
  "crossbeam-channel",
  "log",
