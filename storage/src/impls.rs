@@ -193,6 +193,7 @@ impl StorageOperations for RollupStorage {
     }
 
     async fn close(self) -> Result<(), Self::Error> {
+        self.try_wait_snapshot_complete().await;
         self.exit.store(true, std::sync::atomic::Ordering::Relaxed);
         self.blockstore.drop_signal();
         self.join();

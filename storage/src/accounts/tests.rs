@@ -33,6 +33,7 @@ async fn init_from_snapshot_works() -> Result<()> {
         .storage
         .snapshot_config
         .full_snapshot_archive_interval_slots = 1; // set snapshot interval to 1
+    config.storage.wait_snapshot_complete = true;
     let mut store = RollupStorage::new(config)?;
     store.init()?;
     let keypairs = store.config.keypairs.clone();
@@ -95,8 +96,6 @@ async fn init_from_snapshot_works() -> Result<()> {
 
     // 3. save and close
     store.force_save().await?;
-    // TODO: sleep is needed here, improve later
-    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
     store.close().await?;
 
     // 4. open with snapshot
