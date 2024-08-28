@@ -22,14 +22,7 @@ impl RollupStorage {
     }
 
     pub fn reorg(&mut self, slot: u64, finalized: Option<u64>) -> Result<Vec<BankWithScheduler>> {
-        let mut bank_forks = self.bank_forks.write().unwrap();
-        let removed = bank_forks
-            .set_root(
-                slot,
-                &self.background_service.accounts_background_request_sender,
-                finalized,
-            )
-            .map_err(|e| BankError::SetRootFailed(e.to_string()))?;
+        let removed = self.set_root(slot, finalized)?;
 
         // TODO: this should not purge slots that on the best chain
         removed.iter().for_each(|bank| {
@@ -37,8 +30,30 @@ impl RollupStorage {
                 .purge_and_compact_slots(bank.slot(), bank.slot());
         });
 
+        let bank_forks = self.bank_forks.read().unwrap();
         self.bank = bank_forks.working_bank();
 
         Ok(removed)
+    }
+
+    pub fn set_root(
+        &mut self,
+        slot: u64,
+        finalized: Option<u64>,
+    ) -> Result<Vec<BankWithScheduler>> {
+        self.blockstore
+            .set_roots(std::iter::once(&slot))
+            .map_err(|e| BankError::SetRootFailed(e.to_string()))?;
+        let removed_banks = self
+            .bank_forks
+            .write()
+            .unwrap()
+            .set_root(
+                slot,
+                &self.background_service.accounts_background_request_sender,
+                finalized,
+            )
+            .map_err(|e| BankError::SetRootFailed(e.to_string()))?;
+        Ok(removed_banks)
     }
 }

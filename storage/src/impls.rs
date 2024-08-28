@@ -1,7 +1,7 @@
 use rollups_interface::l2::{
     bank::{BankInfo, BankOperations},
     executor::Init,
-    storage::{StorageOperations, TransactionSet},
+    storage::{StorageOperations, TransactionSet, TransactionsResult},
 };
 use solana_gossip::cluster_info::ClusterInfo;
 use solana_ledger::{
@@ -177,24 +177,18 @@ impl StorageOperations for RollupStorage {
         origin: &Self::TransactionSet<'a>,
     ) -> Result<(), Self::Error> {
         // TODO: make commit async
-        self.blockstore_save(&result, origin.transactions())?;
-        self.bank_commit(result, origin)?;
+        let executed_txs = result.success_txs(origin.transactions());
+        let entries = self.transactions_to_entries(executed_txs)?;
+
+        self.bank_commit(result, origin, &entries)?;
+        self.blockstore_save(entries)?;
 
         Ok(())
     }
 
     async fn force_save(&mut self) -> Result<(), Self::Error> {
         self.bank.freeze();
-        let _removed_banks = self
-            .bank_forks
-            .write()
-            .unwrap()
-            .set_root(
-                self.bank.slot(),
-                &self.background_service.accounts_background_request_sender,
-                None,
-            )
-            .map_err(|e| BankError::SetRootFailed(e.to_string()))?;
+        self.set_root(self.bank.slot(), None)?;
         Ok(())
     }
 

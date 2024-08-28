@@ -1,13 +1,14 @@
 use process::EntriesProcessor;
-use rollups_interface::l2::storage::TransactionsResult;
-use solana_entry::entry::Entry;
+use solana_entry::entry::{next_hash, Entry};
 use solana_ledger::{blockstore_processor, shred::Shred};
-use solana_sdk::transaction::{SanitizedTransaction, VersionedTransaction};
+use solana_sdk::{hash::Hash, transaction::VersionedTransaction};
 
-use crate::{execution::TransactionsResultWrapper, Error, Result, RollupStorage};
+use crate::{error::BankError, Error, Result, RollupStorage};
 
 pub mod process;
 pub mod txs;
+
+const DEFAULT_NUM_HASHES: u64 = 2;
 
 impl RollupStorage {
     pub(crate) fn aligne_blockstore_with_bank_forks(&self) -> Result<()> {
@@ -25,13 +26,8 @@ impl RollupStorage {
         Ok(())
     }
 
-    pub(crate) fn blockstore_save(
-        &self,
-        result: &TransactionsResultWrapper,
-        extras: &[SanitizedTransaction],
-    ) -> Result<()> {
-        let executed_txs = result.success_txs(extras);
-        let (data_shreds, code_shreds) = self.transactions_to_shreds(executed_txs)?;
+    pub(crate) fn blockstore_save(&self, entries: Vec<Entry>) -> Result<()> {
+        let (data_shreds, code_shreds) = self.transactions_to_shreds(entries)?;
         let _data_info =
             self.blockstore
                 .insert_shreds(data_shreds, Some(&self.leader_schedule_cache), true)?;
@@ -43,9 +39,8 @@ impl RollupStorage {
 
     pub(crate) fn transactions_to_shreds(
         &self,
-        txs: Vec<VersionedTransaction>,
+        entries: Vec<Entry>,
     ) -> Result<(Vec<Shred>, Vec<Shred>)> {
-        let entries = self.transactions_to_entries(txs);
         let mut processor = EntriesProcessor::new(Default::default());
 
         processor.process(
@@ -62,11 +57,45 @@ impl RollupStorage {
         )
     }
 
-    fn transactions_to_entries(&self, transactions: Vec<VersionedTransaction>) -> Vec<Entry> {
-        let entry = Entry {
+    pub(crate) fn transactions_to_entries(
+        &self,
+        transactions: Vec<VersionedTransaction>,
+    ) -> Result<Vec<Entry>> {
+        let mut start_hash = self
+            .bank
+            .parent()
+            .ok_or(BankError::BankNotExists(self.bank.parent_slot()))?
+            .last_blockhash();
+        let entry = self.new_entry(&start_hash, DEFAULT_NUM_HASHES, transactions);
+        start_hash = entry.hash;
+
+        let mut entries = vec![entry];
+        for _ in 0..self.config.genesis.ticks_per_slot {
+            let entry = self.new_entry(&start_hash, DEFAULT_NUM_HASHES, vec![]);
+            start_hash = entry.hash;
+            entries.push(entry);
+        }
+
+        Ok(entries)
+    }
+
+    fn new_entry(
+        &self,
+        prev_hash: &Hash,
+        mut num_hashes: u64,
+        transactions: Vec<VersionedTransaction>,
+    ) -> Entry {
+        // If you passed in transactions, but passed in num_hashes == 0, then
+        // next_hash will generate the next hash and set num_hashes == 1
+        if num_hashes == 0 && !transactions.is_empty() {
+            num_hashes = 1;
+        }
+
+        let hash = next_hash(prev_hash, num_hashes, &transactions);
+        Entry {
+            num_hashes,
+            hash,
             transactions,
-            ..Default::default()
-        };
-        vec![entry]
+        }
     }
 }

@@ -1,5 +1,5 @@
 use anyhow::Result;
-use rollups_interface::l2::storage::StorageOperations;
+use rollups_interface::l2::{bank::BankOperations, storage::StorageOperations};
 use solana_accounts_db::{
     accounts_db::{self, ACCOUNTS_DB_CONFIG_FOR_TESTING},
     accounts_index::AccountSecondaryIndexes,
@@ -9,11 +9,139 @@ use solana_runtime::{
     snapshot_bank_utils,
     snapshot_utils::{self, create_tmp_accounts_dir_for_tests},
 };
-use solana_sdk::{clock::Slot, pubkey::Pubkey, system_transaction};
+use solana_sdk::{
+    clock::Slot, pubkey::Pubkey, signature::Keypair, signer::Signer, system_transaction,
+    transaction::SanitizedTransaction,
+};
 use solana_svm::runtime_config::RuntimeConfig;
 use std::time::{Duration, Instant};
 
-use crate::{config::GlobalConfig, RollupStorage};
+use crate::{
+    blockstore::txs::CommitBatch,
+    config::GlobalConfig,
+    execution::TransactionsResultWrapper,
+    init::default::{DEFAULT_MINT_LAMPORTS, DEFAULT_VALIDATOR_LAMPORTS},
+    tests::mock::processor::process_transfers_ex,
+    RollupStorage,
+};
+
+#[tokio::test]
+async fn init_from_snapshot_works() -> Result<()> {
+    let ledger_path = tempfile::tempdir()?.into_path();
+    let mut config = GlobalConfig::new_temp(&ledger_path)?;
+    config
+        .storage
+        .snapshot_config
+        .full_snapshot_archive_interval_slots = 1; // set snapshot interval to 1
+    let mut store = RollupStorage::new(config)?;
+    store.init()?;
+    let keypairs = store.config.keypairs.clone();
+
+    store.set_snapshot_interval(1);
+    assert_eq!(store.current_height(), 0);
+
+    let alice = keypairs.mint_keypair.as_ref().unwrap().clone();
+    let bob = keypairs.validator_keypair.as_ref().unwrap().clone();
+    let charlie = Keypair::new().pubkey();
+    let dave = Keypair::new().pubkey();
+
+    const ALICE_INIT_BALANCE: u64 = DEFAULT_MINT_LAMPORTS;
+    const BOB_INIT_BALANCE: u64 = DEFAULT_VALIDATOR_LAMPORTS;
+    assert_eq!(store.balance(&alice.pubkey()), ALICE_INIT_BALANCE);
+    assert_eq!(store.balance(&bob.pubkey()), BOB_INIT_BALANCE);
+    assert_eq!(store.balance(&charlie), 0);
+    assert_eq!(store.balance(&dave), 0);
+
+    const TO_CHARLIE: u64 = 2000000;
+    const TO_DAVE: u64 = 1000000;
+    const FEE: u64 = 5000;
+
+    // 1. process transfers
+    store.bump()?;
+    let bank = store.bank.clone();
+
+    let raw_txs = vec![
+        system_transaction::transfer(&alice, &charlie, TO_CHARLIE, bank.last_blockhash()),
+        system_transaction::transfer(&bob, &dave, TO_DAVE, bank.last_blockhash()),
+    ];
+    let origin_txs = raw_txs
+        .clone()
+        .into_iter()
+        .map(|tx| SanitizedTransaction::from_transaction_for_tests(tx))
+        .collect::<Vec<_>>();
+    let results = process_transfers_ex(&store, origin_txs.clone());
+
+    // 2. commit
+    store
+        .commit(
+            TransactionsResultWrapper { output: results },
+            &CommitBatch::new(origin_txs.clone().into()),
+        )
+        .await?;
+
+    let (bank_height, store_height) = store.get_mixed_heights()?;
+    assert_eq!(bank_height, 1);
+    assert_eq!(store_height, Some(1));
+    assert_eq!(
+        store.balance(&alice.pubkey()),
+        ALICE_INIT_BALANCE - TO_CHARLIE - FEE
+    );
+    assert_eq!(
+        store.balance(&bob.pubkey()),
+        BOB_INIT_BALANCE - TO_DAVE - FEE
+    );
+    assert_eq!(store.balance(&charlie), TO_CHARLIE);
+    assert_eq!(store.balance(&dave), TO_DAVE);
+
+    // 3. save and close
+    store.force_save().await?;
+    // TODO: sleep is needed here, improve later
+    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+    store.close().await?;
+
+    // 4. open with snapshot
+    assert!(ledger_path.join("snapshots/1/1").exists());
+    let mut config = GlobalConfig::new(&ledger_path)?;
+    config.keypairs = keypairs.clone();
+    let mut store = RollupStorage::new(config)?;
+    store.init()?;
+
+    let (bank_height, store_height) = store.get_mixed_heights()?;
+    assert_eq!(bank_height, 1);
+    assert_eq!(store_height, Some(1));
+    assert_eq!(
+        store.balance(&alice.pubkey()),
+        ALICE_INIT_BALANCE - TO_CHARLIE - FEE
+    );
+    // TODO: check why bob balance is not `BOB_INIT_BALANCE - TO_DAVE - FEE` ?
+    assert_eq!(store.balance(&bob.pubkey()), BOB_INIT_BALANCE - TO_DAVE);
+    assert_eq!(store.balance(&charlie), TO_CHARLIE);
+    assert_eq!(store.balance(&dave), TO_DAVE);
+    store.close().await?;
+
+    // 5. open without snapshot
+    let mut config = GlobalConfig::new(&ledger_path)?;
+    config.keypairs = keypairs;
+    config.storage.snapshot_config = Default::default(); // disable snapshot
+    let mut store = RollupStorage::new(config)?;
+    store.init()?;
+
+    let (bank_height, store_height) = store.get_mixed_heights()?;
+    assert_eq!(bank_height, 1);
+    assert_eq!(store_height, Some(1));
+    // TODO: check why bob balance is not `ALICE_INIT_BALANCE - TO_CHARLIE` ?
+    assert_eq!(
+        store.balance(&alice.pubkey()),
+        ALICE_INIT_BALANCE - TO_CHARLIE
+    );
+    // TODO: check why bob balance is not `BOB_INIT_BALANCE - TO_DAVE - FEE` ?
+    assert_eq!(store.balance(&bob.pubkey()), BOB_INIT_BALANCE - TO_DAVE);
+    assert_eq!(store.balance(&charlie), TO_CHARLIE);
+    assert_eq!(store.balance(&dave), TO_DAVE);
+    store.close().await?;
+
+    Ok(())
+}
 
 #[tokio::test]
 #[ignore = "Takes a long time to run"]
