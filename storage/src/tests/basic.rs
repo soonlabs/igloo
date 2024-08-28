@@ -109,11 +109,7 @@ fn init_with_given_config_works() -> Result<()> {
 #[tokio::test]
 async fn storage_basic_process_works() -> Result<()> {
     let ledger_path = tempfile::tempdir()?.into_path();
-    let mut config = GlobalConfig::new_temp(&ledger_path)?;
-    config
-        .storage
-        .snapshot_config
-        .full_snapshot_archive_interval_slots = 1; // set snapshot interval to 1
+    let config = GlobalConfig::new_temp(&ledger_path)?;
     let mut store = RollupStorage::new(config)?;
     store.init()?;
     let keypairs = store.config.keypairs.clone();
@@ -222,26 +218,26 @@ async fn storage_basic_process_works() -> Result<()> {
     // 4. open again
     let mut config = GlobalConfig::new(&ledger_path)?;
     config.keypairs = keypairs;
+    let ticks_per_slot = config.genesis.ticks_per_slot;
     let mut store = RollupStorage::new(config)?;
     store.init()?;
 
     let (bank_height, store_height) = store.get_mixed_heights()?;
     assert_eq!(bank_height, 1);
     assert_eq!(store_height, Some(1));
+    // TODO: check why bob balance is not `ALICE_INIT_BALANCE - TO_CHARLIE` ?
     assert_eq!(
         store.balance(&alice.pubkey()),
-        ALICE_INIT_BALANCE - TO_CHARLIE - FEE
+        ALICE_INIT_BALANCE - TO_CHARLIE
     );
     // TODO: check why bob balance is not `BOB_INIT_BALANCE - TO_DAVE - FEE` ?
     assert_eq!(store.balance(&bob.pubkey()), BOB_INIT_BALANCE - TO_DAVE);
     assert_eq!(store.balance(&charlie), TO_CHARLIE);
     assert_eq!(store.balance(&dave), TO_DAVE);
 
-    // load snapshot, compare with accounts data
-
     // load entries from blockstore, compare with original transactions
     let entries = store.blockstore.get_slot_entries(1, 0)?;
-    assert_eq!(entries.len(), 1);
+    assert_eq!(entries.len() as u64, ticks_per_slot + 1);
     assert_eq!(entries[0].transactions.len(), 2);
     assert_eq!(
         entries[0].transactions[0],

@@ -1,4 +1,5 @@
 use rollups_interface::l2::{bank::BankInfo, storage::TransactionSet};
+use solana_entry::entry::Entry;
 use solana_runtime::{
     bank::{Bank, ExecutedTransactionCounts, NewBankOptions, TotalAccountsStats},
     installed_scheduler_pool::BankWithScheduler,
@@ -104,6 +105,7 @@ impl RollupStorage {
         &mut self,
         mut result: TransactionsResultWrapper,
         batch: &CommitBatch,
+        entries: &[Entry],
     ) -> Result<()> {
         // In order to avoid a race condition, leaders must get the last
         // blockhash *before* recording transactions because recording
@@ -126,17 +128,19 @@ impl RollupStorage {
             &mut result.output.execute_timings,
         );
 
-        self.register_ticks();
-        Ok(())
+        self.register_ticks(entries)
     }
 
-    fn register_ticks(&self) {
+    fn register_ticks(&self, entries: &[Entry]) -> Result<()> {
         let fork = self.bank_forks.read().unwrap();
         let bank_with_schedule = fork.working_bank_with_scheduler();
-        // TODO: register real ticks later if use scheduled bank
-        for _ in bank_with_schedule.tick_height()..bank_with_schedule.max_tick_height() {
-            bank_with_schedule.register_tick(&Default::default());
-        }
+
+        // Skip the first tick because it's the entry that contains transactions
+        entries.iter().skip(1).for_each(|entry| {
+            bank_with_schedule.register_tick(&entry.hash);
+        });
+
+        Ok(())
     }
 
     fn collect_execution_logs(

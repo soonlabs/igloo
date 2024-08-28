@@ -12,6 +12,9 @@ pub enum Error {
     #[error("Load blockstore failed: {0}")]
     LoadBlockstoreFailed(String),
 
+    #[error("Init bank forks failed: {0}")]
+    InitBankForksFailed(String),
+
     #[error("Init config failed: {0}")]
     InitConfigFailed(String),
 
@@ -47,6 +50,9 @@ pub enum StorageError {
 
     #[error("Invalid Merkle root, slot: {slot}, index: {index}")]
     InvalidMerkleRoot { slot: Slot, index: u64 },
+
+    #[error("Empty entries hashes")]
+    EmptyEntriesHashes,
 }
 
 #[derive(Debug, Error)]
