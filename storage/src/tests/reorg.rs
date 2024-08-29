@@ -121,6 +121,11 @@ async fn reorg_works() -> Result<()> {
     let bank3 = store.new_slot_with_parent(bank1.clone(), 3)?.clone();
     assert_eq!(bank3.slot(), 3);
     assert_eq!(bank3.parent_slot(), 1);
+    // + FEE here because bob is the leader of Slot 1, so it has the 50% tx fee of that Slot.
+    assert_eq!(
+        store.balance(&bob.pubkey()),
+        BOB_INIT_BALANCE - SLOT1_TO_DAVE - FEE + FEE
+    );
     new_slot_with_two_txs(
         bank3,
         &mut store,
@@ -138,7 +143,7 @@ async fn reorg_works() -> Result<()> {
     );
     assert_eq!(
         store.balance(&bob.pubkey()),
-        BOB_INIT_BALANCE - SLOT1_TO_DAVE - SLOT3_TO_DAVE - FEE // FIXME: fee is not calculated correctly
+        BOB_INIT_BALANCE - SLOT1_TO_DAVE - SLOT3_TO_DAVE - FEE
     );
     assert_eq!(store.balance(&charlie), SLOT1_TO_CHARLIE + SLOT3_TO_CHARLIE);
     assert_eq!(store.balance(&dave), SLOT1_TO_DAVE + SLOT3_TO_DAVE);
@@ -149,6 +154,12 @@ async fn reorg_works() -> Result<()> {
     let bank4 = store.new_slot_with_parent(bank2.clone(), 4)?.clone();
     assert_eq!(bank4.slot(), 4);
     assert_eq!(bank4.parent_slot(), 2);
+    // + FEE here because bob is the leader of Slot 2, so it has the 50% tx fee of that Slot.
+    assert_eq!(
+        store.balance(&bob.pubkey()),
+        BOB_INIT_BALANCE - SLOT2_TO_DAVE - FEE + FEE
+    );
+
     new_slot_with_two_txs(
         bank4,
         &mut store,
@@ -166,7 +177,7 @@ async fn reorg_works() -> Result<()> {
     );
     assert_eq!(
         store.balance(&bob.pubkey()),
-        BOB_INIT_BALANCE - SLOT2_TO_DAVE - SLOT4_TO_DAVE - FEE // FIXME: fee is not calculated correctly
+        BOB_INIT_BALANCE - SLOT2_TO_DAVE - SLOT4_TO_DAVE - FEE
     );
 
     assert_eq!(store.current_height(), 4);
@@ -189,9 +200,10 @@ async fn reorg_works() -> Result<()> {
         store.balance(&alice.pubkey()),
         ALICE_INIT_BALANCE - SLOT1_TO_CHARLIE - SLOT3_TO_CHARLIE - FEE * 2
     );
+    // + FEE * 2 here because bob is the leader of Slot 1 & Slot 3, so it has the 50% tx fee of that 2 Slots.
     assert_eq!(
         store.balance(&bob.pubkey()),
-        BOB_INIT_BALANCE - SLOT1_TO_DAVE - SLOT3_TO_DAVE // FIXME: fee is not calculated correctly
+        BOB_INIT_BALANCE - SLOT1_TO_DAVE - SLOT3_TO_DAVE - FEE * 2 + FEE * 2
     );
     assert_eq!(store.balance(&charlie), SLOT1_TO_CHARLIE + SLOT3_TO_CHARLIE);
     assert_eq!(store.balance(&dave), SLOT1_TO_DAVE + SLOT3_TO_DAVE);
