@@ -1,12 +1,31 @@
-use rollups_interface::l2::storage::TransactionsResult;
+use crate::{blockstore::txs::CommitBatch, Result, RollupStorage};
+use rollups_interface::l2::storage::{TransactionSet, TransactionsResult};
 use solana_sdk::transaction::{SanitizedTransaction, VersionedTransaction};
-use solana_svm::transaction_processor::LoadAndExecuteSanitizedTransactionsOutput;
+use solana_svm::{
+    transaction_processor::LoadAndExecuteSanitizedTransactionsOutput,
+    transaction_results::TransactionResults,
+};
 
 #[cfg(test)]
 mod tests;
 
 pub struct TransactionsResultWrapper {
     pub output: LoadAndExecuteSanitizedTransactionsOutput,
+}
+
+impl RollupStorage {
+    pub(crate) fn commit_block(
+        &mut self,
+        result: TransactionsResultWrapper,
+        origin: &CommitBatch,
+    ) -> Result<TransactionResults> {
+        let executed_txs = result.success_txs(origin.transactions());
+        let entries = self.transactions_to_entries(executed_txs)?;
+
+        let bank_result = self.bank_commit(result, &origin, &entries)?;
+        self.blockstore_save(entries)?;
+        Ok(bank_result)
+    }
 }
 
 impl TransactionsResult for TransactionsResultWrapper {

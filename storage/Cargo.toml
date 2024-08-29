@@ -27,6 +27,12 @@ solana-entry = { workspace = true }
 solana-measure = { workspace = true }
 solana-gossip = { workspace = true }
 solana-streamer = { workspace = true }
+solana-rpc = { workspace = true }
+solana-transaction-status = { workspace = true }
+solana-account-decoder = { workspace = true }
+solana-metrics = { workspace = true }
+spl-token = { workspace = true }
+spl-token-2022 = { workspace = true }
 
 rollups-interface = { workspace = true }
 

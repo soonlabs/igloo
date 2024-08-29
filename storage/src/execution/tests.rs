@@ -109,7 +109,7 @@ async fn conflict_transaction_may_lead_incorrect_state() -> Result<()> {
     store
         .commit(
             TransactionsResultWrapper { output: results },
-            &CommitBatch::new(origin_txs.clone().into()),
+            CommitBatch::new(origin_txs.clone().into()),
         )
         .await?;
 

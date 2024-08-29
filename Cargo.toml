@@ -47,6 +47,12 @@ solana-stake-program = { version = "2.0.6" }
 solana-measure = { version = "2.0.6" }
 solana-gossip = { version = "2.0.6" }
 solana-streamer = { version = "2.0.6" }
+solana-rpc = { version = "2.0.6" }
+solana-transaction-status = { version = "2.0.6" }
+solana-account-decoder = { version = "2.0.6" }
+solana-metrics = { version = "2.0.6" }
+spl-token = "=6.0.0"
+spl-token-2022 = "=4.0.0"
 
 rollups-interface = { path = "interface" }
 svm-executor = { path = "svm/executor" }
@@ -82,3 +88,7 @@ solana-zk-token-sdk = { git = "https://github.com/anza-xyz/agave.git", rev = "60
 # solana-measure = { path = "../agave/measure" }
 # solana-gossip = { path = "../agave/gossip" }
 # solana-streamer = { path = "../agave/streamer" }
+# solana-rpc = { path = "../agave/rpc" }
+# solana-transaction-status = { path = "../agave/transaction-status" }
+# solana-account-decoder = { path = "../agave/account-decoder" }
+# solana-metrics = { path = "../agave/metrics" }

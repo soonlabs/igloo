@@ -1,15 +1,10 @@
+use crate::{error::BankError, Result, RollupStorage};
+use solana_runtime::{bank_forks::BankForks, installed_scheduler_pool::BankWithScheduler};
+use solana_sdk::{account::ReadableAccount, pubkey::Pubkey};
 use std::{
     collections::HashSet,
     sync::{Arc, RwLock},
 };
-
-use rollups_interface::l2::bank;
-use solana_runtime::{
-    bank::Bank, bank_forks::BankForks, installed_scheduler_pool::BankWithScheduler,
-};
-use solana_sdk::{account::ReadableAccount, pubkey::Pubkey};
-
-use crate::{error::BankError, Result, RollupStorage};
 
 #[cfg(test)]
 mod tests;

@@ -105,7 +105,14 @@ pub struct StorageConfig {
     pub accounts_shrink_ratio: AccountShrinkThreshold,
     pub ledger_column_options: LedgerColumnOptions,
     pub runtime_config: RuntimeConfig,
+    pub history_config: HistoryConfig,
     pub use_snapshot_archives_at_startup: UseSnapshotArchivesAtStartup,
+}
+
+#[derive(Clone)]
+pub struct HistoryConfig {
+    pub enable_transaction_history: bool,
+    pub enable_extended_tx_metadata_storage: bool,
 }
 
 impl Default for StorageConfig {
@@ -133,7 +140,17 @@ impl Default for StorageConfig {
             accounts_db_config: None,
             ledger_column_options: LedgerColumnOptions::default(),
             runtime_config: RuntimeConfig::default(),
+            history_config: Default::default(),
             use_snapshot_archives_at_startup: UseSnapshotArchivesAtStartup::default(),
+        }
+    }
+}
+
+impl Default for HistoryConfig {
+    fn default() -> Self {
+        Self {
+            enable_transaction_history: true,
+            enable_extended_tx_metadata_storage: false,
         }
     }
 }
