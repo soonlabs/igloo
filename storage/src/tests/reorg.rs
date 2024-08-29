@@ -56,7 +56,10 @@ async fn reorg_works() -> Result<()> {
     assert_eq!(bank0.slot(), 0);
 
     // Slot 1
-    const SLOT1_TO_CHARLIE: u64 = 2_000_000; // FIXME: assert_eq! failed if balance is 200_000 or less
+    // FIXME: assert_eq! failed if transfer amount is 890_880 or less,
+    // FIXME: because 890_880 is minimum rent exempt amount,
+    // FIXME: should check this situation before `transfer` instruction.
+    const SLOT1_TO_CHARLIE: u64 = 2_000_000;
     const SLOT1_TO_DAVE: u64 = 1_000_000;
     store.bump()?;
     let bank1 = store.bank.clone();
