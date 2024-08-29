@@ -14,6 +14,7 @@ log = { workspace = true }
 tempfile = { workspace = true }
 crossbeam-channel = { workspace = true }
 rand = { workspace = true }
+assert_matches = { workspace = true }
 
 solana-ledger = { workspace = true }
 solana-accounts-db = { workspace = true }

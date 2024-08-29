@@ -180,7 +180,7 @@ async fn reorg_works() -> Result<()> {
     assert_eq!(store.current_height(), 3);
     let (bank_height, store_height) = store.get_mixed_heights()?;
     assert_eq!(bank_height, 3);
-    assert_eq!(store_height, Some(3));
+    assert_eq!(store_height, Some(4));
 
     assert_eq!(
         store.balance(&alice.pubkey()),
@@ -201,11 +201,22 @@ async fn reorg_works() -> Result<()> {
     assert!(bank_forks.get(4).is_none());
 
     let blockstore = store.blockstore.clone();
-    assert!(blockstore.get_slot_entries(4, 0).unwrap().is_empty());
+    assert!(blockstore.get_slot_entries(4, 0).is_err());
     assert!(!blockstore.get_slot_entries(3, 0).unwrap().is_empty());
-    assert!(blockstore.get_slot_entries(2, 0).unwrap().is_empty());
+    assert!(blockstore.get_slot_entries(2, 0).is_err());
     assert!(!blockstore.get_slot_entries(1, 0).unwrap().is_empty());
-    assert!(blockstore.get_slot_entries(0, 0).unwrap().is_empty());
+    // slot 0 removed in bank but should not set to dead
+    assert!(!blockstore.get_slot_entries(0, 0).unwrap().is_empty());
+
+    // slot 4 and slot 2 in blockstore set to dead but still exists
+    let result = blockstore
+        .get_slot_entries_with_shred_info(4, 0, true)
+        .unwrap();
+    assert!(!result.0.is_empty());
+    let result = blockstore
+        .get_slot_entries_with_shred_info(2, 0, true)
+        .unwrap();
+    assert!(!result.0.is_empty());
 
     Ok(())
 }

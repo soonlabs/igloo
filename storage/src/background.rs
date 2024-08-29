@@ -1,4 +1,7 @@
-use std::sync::{atomic::AtomicBool, Arc, RwLock};
+use std::{
+    sync::{atomic::AtomicBool, Arc, RwLock},
+    time::Duration,
+};
 
 use crossbeam_channel::unbounded;
 use solana_core::{
@@ -12,10 +15,13 @@ use solana_runtime::{
         SnapshotRequestHandler,
     },
     bank_forks::BankForks,
+    snapshot_config::SnapshotConfig,
     snapshot_hash::StartingSnapshotHashes,
+    snapshot_utils,
 };
+use tokio::time::sleep;
 
-use crate::{config::StorageConfig, sig_hub::SignalHub, Error, Result};
+use crate::{config::StorageConfig, sig_hub::SignalHub, Error, Result, RollupStorage};
 
 #[allow(dead_code)]
 pub struct StorageBackground {
@@ -23,6 +29,68 @@ pub struct StorageBackground {
     pub(crate) accounts_background_request_sender: AbsRequestSender,
     pub(crate) accounts_hash_verifier: AccountsHashVerifier,
     pub(crate) snapshot_packager_service: SnapshotPackagerService,
+}
+
+impl RollupStorage {
+    pub async fn try_wait_snapshot_complete(&self) {
+        let storage_cfg = &self.config.storage;
+        if !storage_cfg.snapshot_config.should_generate_snapshots()
+            || !storage_cfg.wait_snapshot_complete
+        {
+            return;
+        }
+
+        let full_latest = self.wait_full_snapshot(&storage_cfg.snapshot_config).await;
+        if let Some(full_latest) = full_latest {
+            self.wait_incremental_snapshot(&storage_cfg.snapshot_config, full_latest)
+                .await;
+        }
+    }
+
+    async fn wait_full_snapshot(&self, snapshot_config: &SnapshotConfig) -> Option<u64> {
+        let expect_slot = self.get_latest_snapshot(
+            self.current_height(),
+            snapshot_config.full_snapshot_archive_interval_slots,
+        );
+        if let Some(slot) = expect_slot {
+            while snapshot_utils::get_highest_full_snapshot_archive_slot(
+                &snapshot_config.full_snapshot_archives_dir,
+            ) != Some(slot)
+            {
+                debug!("Waiting for full snapshot {slot}");
+                sleep(Duration::from_millis(20)).await;
+            }
+        }
+
+        expect_slot
+    }
+
+    async fn wait_incremental_snapshot(&self, snapshot_config: &SnapshotConfig, full_latest: u64) {
+        let expect_slot = self.get_latest_snapshot(
+            self.current_height(),
+            snapshot_config.incremental_snapshot_archive_interval_slots,
+        );
+
+        if let Some(slot) = expect_slot {
+            while snapshot_utils::get_highest_incremental_snapshot_archive_slot(
+                &snapshot_config.incremental_snapshot_archives_dir,
+                full_latest,
+            ) != Some(slot)
+            {
+                debug!("Waiting for incremental snapshot {slot}");
+                sleep(Duration::from_millis(20)).await;
+            }
+        }
+    }
+
+    fn get_latest_snapshot(&self, highest: u64, inteval: u64) -> Option<u64> {
+        let reminder = highest % inteval;
+        if reminder >= highest {
+            None
+        } else {
+            Some(highest - reminder)
+        }
+    }
 }
 
 impl StorageBackground {

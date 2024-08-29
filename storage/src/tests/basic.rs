@@ -211,8 +211,6 @@ async fn storage_basic_process_works() -> Result<()> {
 
     // 3. save and close
     store.force_save().await?;
-    // TODO: sleep is needed here, improve later
-    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
     store.close().await?;
 
     // 4. open again

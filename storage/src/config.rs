@@ -2,6 +2,7 @@ use std::{
     collections::HashSet,
     path::{Path, PathBuf},
     sync::Arc,
+    time::Duration,
 };
 
 use rollups_interface::l2::executor::Config;
@@ -86,6 +87,8 @@ pub struct StorageConfig {
     pub expected_genesis_hash: Option<Hash>,
     pub account_paths: Vec<PathBuf>,
     pub snapshot_config: SnapshotConfig,
+    pub wait_snapshot_complete: bool,
+    pub wait_timeout: Duration,
     pub enforce_ulimit_nofile: bool,
     pub fixed_leader_schedule: Option<FixedSchedule>,
     pub new_hard_forks: Option<Vec<Slot>>,
@@ -112,6 +115,8 @@ impl Default for StorageConfig {
             expected_genesis_hash: None,
             account_paths: Vec::new(),
             snapshot_config: SnapshotConfig::new_load_only(),
+            wait_snapshot_complete: false,
+            wait_timeout: Duration::from_secs(10),
             enforce_ulimit_nofile: true,
             fixed_leader_schedule: None,
             new_hard_forks: None,
