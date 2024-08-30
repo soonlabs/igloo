@@ -190,7 +190,7 @@ async fn storage_basic_process_works() -> Result<()> {
     store
         .commit(
             TransactionsResultWrapper { output: results },
-            &CommitBatch::new(origin_txs.clone().into()),
+            CommitBatch::new(origin_txs.clone().into()),
         )
         .await?;
 

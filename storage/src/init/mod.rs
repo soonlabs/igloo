@@ -1,6 +1,7 @@
 use crate::{
     background::StorageBackground,
     config::{GlobalConfig, KeypairsConfig, StorageConfig},
+    history::StorageHistoryServices,
     sig_hub::SignalHub,
     Error, Result, RollupStorage,
 };
@@ -40,6 +41,7 @@ impl RollupStorage {
             starting_snapshot_hashes,
             process_options,
             mut hub,
+            history_services,
         ) = load_blockstore(&mut config, exit.clone(), SignalHub::default())?;
 
         let cluster_info = localhost_cluster_info(
@@ -71,6 +73,7 @@ impl RollupStorage {
             leader_schedule_cache: Arc::new(leader_schedule_cache),
             cluster_info,
             process_options,
+            history_services,
         })
     }
 
@@ -133,6 +136,7 @@ fn load_blockstore(
     Option<StartingSnapshotHashes>,
     blockstore_processor::ProcessOptions,
     SignalHub,
+    StorageHistoryServices,
 )> {
     let config = &cfg.storage;
     let ledger_path = &cfg.ledger_path;
@@ -202,6 +206,17 @@ fn load_blockstore(
         ..blockstore_processor::ProcessOptions::default()
     };
 
+    let transaction_history_services = if config.history_config.enable_transaction_history {
+        StorageHistoryServices::new(
+            blockstore.clone(),
+            exit.clone(),
+            &config.history_config,
+            None,
+        )
+    } else {
+        Default::default()
+    };
+
     let (bank_forks, mut leader_schedule_cache, starting_snapshot_hashes) =
         bank_forks_utils::load_bank_forks(
             &genesis_config,
@@ -209,7 +224,9 @@ fn load_blockstore(
             config.account_paths.clone(),
             Some(&config.snapshot_config),
             &process_options,
-            None,
+            transaction_history_services
+                .cache_block_meta_sender
+                .as_ref(),
             None,
             None,
             exit,
@@ -240,6 +257,7 @@ fn load_blockstore(
         starting_snapshot_hashes,
         process_options,
         hub,
+        transaction_history_services,
     ))
 }
 

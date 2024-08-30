@@ -17,8 +17,8 @@ impl RollupStorage {
             &self.bank_forks,
             &self.leader_schedule_cache,
             &self.process_options,
-            None,
-            None,
+            self.history_services.transaction_status_sender.as_ref(),
+            self.history_services.cache_block_meta_sender.as_ref(),
             None,
             &self.background_service.accounts_background_request_sender,
         )

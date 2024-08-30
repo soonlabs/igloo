@@ -19,7 +19,7 @@ pub trait StorageOperations {
     async fn commit<'a>(
         &mut self,
         result: Self::TxsResult,
-        origin: &Self::TransactionSet<'a>,
+        origin: Self::TransactionSet<'a>,
     ) -> Result<(), Self::Error>;
 
     /// Force save the storage to disk.
