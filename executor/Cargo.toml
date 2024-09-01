@@ -1,0 +1,29 @@
+[package]
+name = "rollups-executor"
+version.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[dependencies]
+rollups-interface = { workspace = true }
+rollups-storage = { workspace = true }
+rollups-validator = { workspace = true }
+tempfile = { workspace = true }
+
+thiserror = { workspace = true }
+tokio = { workspace = true }
+log = { workspace = true }
+crossbeam-channel = { workspace = true }
+
+solana-ledger = { workspace = true }
+solana-accounts-db = { workspace = true }
+solana-sdk = { workspace = true }
+solana-svm = { workspace = true }
+solana-runtime = { workspace = true }
+solana-core = { workspace = true }
+
+[dev-dependencies]
+anyhow = { workspace = true }

@@ -257,7 +257,7 @@ async fn new_slot_with_two_txs(
     store
         .commit(
             TransactionsResultWrapper { output: results },
-            &CommitBatch::new(origin_txs.clone().into()),
+            CommitBatch::new(origin_txs.clone().into()),
         )
         .await?;
 

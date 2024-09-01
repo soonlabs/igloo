@@ -24,6 +24,7 @@ solana-ledger = { workspace = true }
 solana-accounts-db = { workspace = true }
 
 rollups-interface = { workspace = true }
+rollups-storage = { workspace = true }
 
 [features]
 __test = []

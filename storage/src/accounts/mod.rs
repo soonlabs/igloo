@@ -12,7 +12,10 @@ use solana_sdk::{
     pubkey::Pubkey,
     transaction::SanitizedTransaction,
 };
-use solana_svm::transaction_processor::LoadAndExecuteSanitizedTransactionsOutput;
+use solana_svm::{
+    transaction_processor::LoadAndExecuteSanitizedTransactionsOutput,
+    transaction_results::TransactionResults,
+};
 use std::sync::Arc;
 
 use crate::{
@@ -106,7 +109,7 @@ impl RollupStorage {
         mut result: TransactionsResultWrapper,
         batch: &CommitBatch,
         entries: &[Entry],
-    ) -> Result<()> {
+    ) -> Result<TransactionResults> {
         // In order to avoid a race condition, leaders must get the last
         // blockhash *before* recording transactions because recording
         // transactions will only succeed if the block max tick height hasn't
@@ -118,7 +121,7 @@ impl RollupStorage {
             self.bank.last_blockhash_and_lamports_per_signature();
 
         let counts = self.collect_execution_logs(&result.output, batch.transactions());
-        self.bank.commit_transactions(
+        let result = self.bank.commit_transactions(
             batch.transactions(),
             &mut result.output.loaded_transactions,
             result.output.execution_results,
@@ -128,7 +131,8 @@ impl RollupStorage {
             &mut result.output.execute_timings,
         );
 
-        self.register_ticks(entries)
+        self.register_ticks(entries)?;
+        Ok(result)
     }
 
     fn register_ticks(&self, entries: &[Entry]) -> Result<()> {

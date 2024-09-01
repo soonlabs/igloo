@@ -1,7 +1,7 @@
 use rollups_interface::l2::{
     bank::{BankInfo, BankOperations},
     executor::Init,
-    storage::{StorageOperations, TransactionSet, TransactionsResult},
+    storage::StorageOperations,
 };
 use solana_gossip::cluster_info::ClusterInfo;
 use solana_ledger::{
@@ -22,7 +22,7 @@ use std::sync::{atomic::AtomicBool, Arc, RwLock};
 
 use crate::{
     background::StorageBackground, blockstore::txs::CommitBatch, config::GlobalConfig,
-    error::BankError, execution::TransactionsResultWrapper, Error,
+    error::BankError, execution::TransactionsResultWrapper, history::StorageHistoryServices, Error,
 };
 
 pub struct RollupStorage {
@@ -33,6 +33,7 @@ pub struct RollupStorage {
     pub(crate) config: GlobalConfig,
     pub(crate) blockstore: Arc<Blockstore>,
     pub(crate) background_service: StorageBackground,
+    pub(crate) history_services: StorageHistoryServices,
     pub(crate) leader_schedule_cache: Arc<LeaderScheduleCache>,
     pub(crate) process_options: ProcessOptions,
     pub(crate) exit: Arc<AtomicBool>,
@@ -174,15 +175,15 @@ impl StorageOperations for RollupStorage {
     async fn commit<'a>(
         &mut self,
         result: Self::TxsResult,
-        origin: &Self::TransactionSet<'a>,
+        origin: Self::TransactionSet<'a>,
     ) -> Result<(), Self::Error> {
         // TODO: make commit async
-        let executed_txs = result.success_txs(origin.transactions());
-        let entries = self.transactions_to_entries(executed_txs)?;
 
-        self.bank_commit(result, origin, &entries)?;
-        self.blockstore_save(entries)?;
-
+        if self.enable_history() {
+            self.commit_with_history(result, origin)?;
+        } else {
+            self.commit_block(result, &origin)?;
+        }
         Ok(())
     }
 

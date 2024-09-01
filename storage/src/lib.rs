@@ -5,6 +5,7 @@ pub mod config;
 pub mod error;
 pub mod events;
 pub mod execution;
+pub mod history;
 pub mod impls;
 pub mod init;
 pub mod ledger;
