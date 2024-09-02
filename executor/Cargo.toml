@@ -1,5 +1,5 @@
 [package]
-name = "rollups-executor"
+name = "igloo-executor"
 version.workspace = true
 authors.workspace = true
 repository.workspace = true
@@ -8,9 +8,9 @@ license.workspace = true
 edition.workspace = true
 
 [dependencies]
-rollups-interface = { workspace = true }
-rollups-storage = { workspace = true }
-rollups-validator = { workspace = true }
+igloo-interface = { workspace = true }
+igloo-storage = { workspace = true }
+igloo-validator = { workspace = true }
 tempfile = { workspace = true }
 
 thiserror = { workspace = true }

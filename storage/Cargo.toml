@@ -1,5 +1,5 @@
 [package]
-name = "rollups-storage"
+name = "igloo-storage"
 version.workspace = true
 authors.workspace = true
 repository.workspace = true
@@ -34,7 +34,7 @@ solana-metrics = { workspace = true }
 spl-token = { workspace = true }
 spl-token-2022 = { workspace = true }
 
-rollups-interface = { workspace = true }
+igloo-interface = { workspace = true }
 
 [dev-dependencies]
 anyhow = { workspace = true }

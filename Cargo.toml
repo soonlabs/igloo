@@ -62,9 +62,9 @@ solana-metrics = { version = "2.0.6" }
 spl-token = "=6.0.0"
 spl-token-2022 = "=4.0.0"
 
-rollups-interface = { path = "interface" }
-rollups-storage = { path = "storage" }
-rollups-validator = { path = "validator" }
+igloo-interface = { path = "interface" }
+igloo-storage = { path = "storage" }
+igloo-validator = { path = "validator" }
 svm-executor = { path = "svm/executor" }
 
 [patch.crates-io]

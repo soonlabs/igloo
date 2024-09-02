@@ -5,7 +5,7 @@ use std::{
     time::Duration,
 };
 
-use rollups_interface::l2::executor::Config;
+use igloo_interface::l2::executor::Config;
 use solana_accounts_db::{
     accounts_db::{AccountShrinkThreshold, AccountsDbConfig},
     accounts_index::AccountSecondaryIndexes,

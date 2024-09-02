@@ -8,7 +8,7 @@ license.workspace = true
 edition.workspace = true
 
 [dependencies]
-rollups-interface = { workspace = true }
+igloo-interface = { workspace = true }
 svm-executor = { workspace = true }
 
 solana-sdk = { workspace = true }

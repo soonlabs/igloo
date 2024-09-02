@@ -1,5 +1,5 @@
 use anyhow::Result;
-use rollups_storage::{
+use igloo_storage::{
     config::GlobalConfig,
     init::default::{DEFAULT_MINT_LAMPORTS, DEFAULT_VALIDATOR_LAMPORTS},
 };

@@ -1,6 +1,6 @@
 use super::Processor;
 use crate::Result;
-use rollups_validator::{settings::Settings, BankValidator, SvmValidator};
+use igloo_validator::{settings::Settings, BankValidator, SvmValidator};
 use solana_runtime::bank::Bank;
 use solana_sdk::transaction::SanitizedTransaction;
 use solana_svm::transaction_processor::{

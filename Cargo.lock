@@ -1630,9 +1630,9 @@ dependencies = [
  "anyhow",
  "chrono",
  "env_logger 0.11.5",
+ "igloo-interface",
  "log",
  "rand 0.8.5",
- "rollups-interface",
  "solana-entry",
  "solana-ledger",
  "solana-sdk 2.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2274,6 +2274,95 @@ name = "ieee754"
 version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9007da9cacbd3e6343da136e98b0d2df013f553d35bdec8b518f07bea768e19c"
+
+[[package]]
+name = "igloo-executor"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "crossbeam-channel",
+ "igloo-interface",
+ "igloo-storage",
+ "igloo-validator",
+ "log",
+ "solana-accounts-db",
+ "solana-core",
+ "solana-ledger",
+ "solana-runtime",
+ "solana-sdk 2.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "solana-svm",
+ "tempfile",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
+name = "igloo-interface"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
+name = "igloo-storage"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "assert_matches",
+ "bincode",
+ "crossbeam-channel",
+ "igloo-interface",
+ "log",
+ "rand 0.8.5",
+ "solana-account-decoder",
+ "solana-accounts-db",
+ "solana-bpf-loader-program",
+ "solana-compute-budget",
+ "solana-core",
+ "solana-entry",
+ "solana-gossip",
+ "solana-ledger",
+ "solana-measure",
+ "solana-metrics",
+ "solana-program-runtime",
+ "solana-rpc",
+ "solana-runtime",
+ "solana-sdk 2.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "solana-stake-program",
+ "solana-streamer",
+ "solana-svm",
+ "solana-system-program",
+ "solana-transaction-status",
+ "spl-token",
+ "spl-token-2022",
+ "svm-executor",
+ "tempfile",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
+name = "igloo-validator"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "crossbeam-channel",
+ "igloo-interface",
+ "igloo-storage",
+ "log",
+ "solana-accounts-db",
+ "solana-core",
+ "solana-entry",
+ "solana-ledger",
+ "solana-runtime",
+ "solana-sdk 2.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "solana-svm",
+ "tempfile",
+ "thiserror",
+ "tokio",
+]
 
 [[package]]
 name = "im"
@@ -3946,95 +4035,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8395b4f860856b740f20a296ea2cd4d823e81a2658cf05ef61be22916026a906"
 dependencies = [
  "chrono",
-]
-
-[[package]]
-name = "rollups-executor"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "crossbeam-channel",
- "log",
- "rollups-interface",
- "rollups-storage",
- "rollups-validator",
- "solana-accounts-db",
- "solana-core",
- "solana-ledger",
- "solana-runtime",
- "solana-sdk 2.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "solana-svm",
- "tempfile",
- "thiserror",
- "tokio",
-]
-
-[[package]]
-name = "rollups-interface"
-version = "0.1.0"
-dependencies = [
- "bincode",
- "thiserror",
- "tokio",
-]
-
-[[package]]
-name = "rollups-storage"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "assert_matches",
- "bincode",
- "crossbeam-channel",
- "log",
- "rand 0.8.5",
- "rollups-interface",
- "solana-account-decoder",
- "solana-accounts-db",
- "solana-bpf-loader-program",
- "solana-compute-budget",
- "solana-core",
- "solana-entry",
- "solana-gossip",
- "solana-ledger",
- "solana-measure",
- "solana-metrics",
- "solana-program-runtime",
- "solana-rpc",
- "solana-runtime",
- "solana-sdk 2.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "solana-stake-program",
- "solana-streamer",
- "solana-svm",
- "solana-system-program",
- "solana-transaction-status",
- "spl-token",
- "spl-token-2022",
- "svm-executor",
- "tempfile",
- "thiserror",
- "tokio",
-]
-
-[[package]]
-name = "rollups-validator"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "crossbeam-channel",
- "log",
- "rollups-interface",
- "rollups-storage",
- "solana-accounts-db",
- "solana-core",
- "solana-entry",
- "solana-ledger",
- "solana-runtime",
- "solana-sdk 2.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "solana-svm",
- "tempfile",
- "thiserror",
- "tokio",
 ]
 
 [[package]]
@@ -6529,8 +6529,8 @@ dependencies = [
  "clap 4.5.16",
  "env_logger 0.11.5",
  "hex",
+ "igloo-interface",
  "log",
- "rollups-interface",
  "solana-sdk 2.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "solana-svm",
  "svm-executor",
@@ -6541,8 +6541,8 @@ name = "svm-executor"
 version = "0.1.0"
 dependencies = [
  "bincode",
- "rollups-interface",
- "rollups-storage",
+ "igloo-interface",
+ "igloo-storage",
  "solana-accounts-db",
  "solana-bpf-loader-program",
  "solana-compute-budget",

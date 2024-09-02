@@ -1,4 +1,4 @@
-use rollups_storage::RollupStorage;
+use igloo_storage::RollupStorage;
 
 use super::Engine;
 
