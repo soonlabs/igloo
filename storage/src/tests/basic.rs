@@ -42,7 +42,7 @@ async fn init_with_all_default_works() -> Result<()> {
         DEFAULT_STAKE_LAMPORTS,
     );
     let accounts_status = store.all_accounts_status()?;
-    assert_eq!(accounts_status.num_accounts, 222);
+    assert_eq!(accounts_status.num_accounts, 223);
     store.close().await?;
 
     // create store again
@@ -68,7 +68,7 @@ async fn init_with_all_default_works() -> Result<()> {
         DEFAULT_STAKE_LAMPORTS,
     );
     let accounts_status = store.all_accounts_status()?;
-    assert_eq!(accounts_status.num_accounts, 222);
+    assert_eq!(accounts_status.num_accounts, 223);
 
     Ok(())
 }

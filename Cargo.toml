@@ -30,27 +30,27 @@ crossbeam-channel = "0.5.13"
 tempfile = "3.3.0"
 assert_matches = "1.5.0"
 
-solana-bpf-loader-program = { version = "2.0.6" }
-solana-compute-budget = { version = "2.0.6" }
-solana-program-runtime = { version = "2.0.6" }
-solana-sdk = { version = "2.0.6" }
-solana-svm = { version = "2.0.6" }
-solana-system-program = { version = "2.0.6" }
-solana-logger = { version = "2.0.6" }
-solana-test-validator = { version = "2.0.6" }
-solana-ledger = { version = "2.0.6" }
-solana-runtime = { version = "2.0.6" }
-solana-entry = { version = "2.0.6" }
-solana-accounts-db = { version = "2.0.6" }
-solana-core = { version = "2.0.6" }
-solana-stake-program = { version = "2.0.6" }
-solana-measure = { version = "2.0.6" }
-solana-gossip = { version = "2.0.6" }
-solana-streamer = { version = "2.0.6" }
-solana-rpc = { version = "2.0.6" }
-solana-transaction-status = { version = "2.0.6" }
-solana-account-decoder = { version = "2.0.6" }
-solana-metrics = { version = "2.0.6" }
+solana-bpf-loader-program = { version = "2.0.7" }
+solana-compute-budget = { version = "2.0.7" }
+solana-program-runtime = { version = "2.0.7" }
+solana-sdk = { version = "2.0.7" }
+solana-svm = { version = "2.0.7" }
+solana-system-program = { version = "2.0.7" }
+solana-logger = { version = "2.0.7" }
+solana-test-validator = { version = "2.0.7" }
+solana-ledger = { version = "2.0.7" }
+solana-runtime = { version = "2.0.7" }
+solana-entry = { version = "2.0.7" }
+solana-accounts-db = { version = "2.0.7" }
+solana-core = { version = "2.0.7" }
+solana-stake-program = { version = "2.0.7" }
+solana-measure = { version = "2.0.7" }
+solana-gossip = { version = "2.0.7" }
+solana-streamer = { version = "2.0.7" }
+solana-rpc = { version = "2.0.7" }
+solana-transaction-status = { version = "2.0.7" }
+solana-account-decoder = { version = "2.0.7" }
+solana-metrics = { version = "2.0.7" }
 spl-token = "=6.0.0"
 spl-token-2022 = "=4.0.0"
 
@@ -59,36 +59,8 @@ svm-executor = { path = "svm/executor" }
 
 [patch.crates-io]
 #crossbeam-epoch = { git = "https://github.com/anza-xyz/crossbeam", rev = "fd279d707025f0e60951e429bf778b4813d1b6bf" } // Patch `crossbeam-epoch v0.9.5 was not used in the crate graph
-solana-curve25519 = { git = "https://github.com/anza-xyz/agave.git", rev = "600cfbb10b2b7af033a9e930d09878c2e4f0844a" }
+solana-curve25519 = { git = "https://github.com/anza-xyz/agave.git", rev = "11b87c1ba32c1895898f2a17502417fccdf1a4c8" }
 
-solana-program = { git = "https://github.com/anza-xyz/agave.git", rev = "600cfbb10b2b7af033a9e930d09878c2e4f0844a" }
-solana-zk-sdk = { git = "https://github.com/anza-xyz/agave.git", rev = "600cfbb10b2b7af033a9e930d09878c2e4f0844a" }
-solana-zk-token-sdk = { git = "https://github.com/anza-xyz/agave.git", rev = "600cfbb10b2b7af033a9e930d09878c2e4f0844a" }
-
-## patches to use local versions, uncomment if needed
-# solana-program = { path = "../agave/sdk/program" }
-# solana-zk-sdk = { path = "../agave/zk-sdk" }
-# solana-zk-token-sdk = { path = "../agave/zk-token-sdk" }
-
-## patches to use local versions, uncomment if needed
-# solana-bpf-loader-program = { path = "../agave/programs/bpf_loader" }
-# solana-compute-budget = { path = "../agave/compute-budget" }
-# solana-program-runtime = { path = "../agave/program-runtime" }
-# solana-sdk = { path = "../agave/sdk" }
-# solana-svm = { path = "../agave/svm" }
-# solana-system-program = { path = "../agave/programs/system" }
-# solana-logger = { path = "../agave/logger" }
-# solana-test-validator = { path = "../agave/test-validator" }
-# solana-ledger = { path = "../agave/ledger" }
-# solana-runtime = { path = "../agave/runtime" }
-# solana-entry = { path = "../agave/entry" }
-# solana-accounts-db = { path = "../agave/accounts-db" }
-# solana-core = { path = "../agave/core" }
-# solana-stake-program = { path = "../agave/programs/stake" }
-# solana-measure = { path = "../agave/measure" }
-# solana-gossip = { path = "../agave/gossip" }
-# solana-streamer = { path = "../agave/streamer" }
-# solana-rpc = { path = "../agave/rpc" }
-# solana-transaction-status = { path = "../agave/transaction-status" }
-# solana-account-decoder = { path = "../agave/account-decoder" }
-# solana-metrics = { path = "../agave/metrics" }
+solana-program = { git = "https://github.com/anza-xyz/agave.git", rev = "11b87c1ba32c1895898f2a17502417fccdf1a4c8" }
+solana-zk-sdk = { git = "https://github.com/anza-xyz/agave.git", rev = "11b87c1ba32c1895898f2a17502417fccdf1a4c8" }
+solana-zk-token-sdk = { git = "https://github.com/anza-xyz/agave.git", rev = "11b87c1ba32c1895898f2a17502417fccdf1a4c8" }
