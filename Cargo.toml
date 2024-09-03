@@ -4,7 +4,7 @@ debug = true
 split-debuginfo = "packed"
 
 [workspace]
-members = ["example", "interface", "storage", "svm/cli", "svm/executor"]
+members = ["example", "interface", "rpc", "storage", "svm/cli", "svm/executor"]
 resolver = "2"
 
 [workspace.package]
