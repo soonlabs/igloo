@@ -23,12 +23,14 @@ log = "0.4.20"
 anyhow = "1.0.79"
 hex = "0.4.3"
 clap = "4.5"
-tokio = "1.37"
 chrono = "0.4.24"
 rand = "0.8.5"
 crossbeam-channel = "0.5.13"
 tempfile = "3.3.0"
 assert_matches = "1.5.0"
+futures = "0.3"
+jsonrpsee = { version = "0.24.3", features = ["server"] }
+tokio = { version = "1.37", features = ["full"] }
 
 solana-bpf-loader-program = { version = "2.0.7" }
 solana-compute-budget = { version = "2.0.7" }

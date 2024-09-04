@@ -8,3 +8,7 @@ license.workspace = true
 edition.workspace = true
 
 [dependencies]
+anyhow = { workspace = true }
+futures = { workspace = true }
+jsonrpsee = { workspace = true }
+tokio = { workspace = true }
