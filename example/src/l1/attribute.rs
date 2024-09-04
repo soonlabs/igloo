@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use super::{head::L1HeadImpl, L1Hash, L1Height, L1Timestamp};
 use crate::l2::tx::L2Transaction;
-use rollups_interface::l1::{Epoch, PayloadAttribute};
+use igloo_interface::l1::{Epoch, PayloadAttribute};
 
 #[derive(Clone)]
 pub struct EpochInfo {

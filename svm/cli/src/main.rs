@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
-use rollups_interface::l2::{
+use igloo_interface::l2::{
     bank::{BankInfo, BankOperations},
     executor::{Config, Init},
 };

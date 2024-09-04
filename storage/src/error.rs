@@ -53,6 +53,9 @@ pub enum StorageError {
 
     #[error("Empty entries hashes")]
     EmptyEntriesHashes,
+
+    #[error("Blockstore set root failed: {0}")]
+    SetRootFailed(String),
 }
 
 #[derive(Debug, Error)]
@@ -60,7 +63,7 @@ pub enum BankError {
     #[error("Bank common error: {0}")]
     Common(String),
 
-    #[error("Set root failed: {0}")]
+    #[error("Bank set root failed: {0}")]
     SetRootFailed(String),
 
     #[error("Bank at slot {0} not found")]

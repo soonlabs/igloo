@@ -2,14 +2,14 @@ use std::path::Path;
 
 use crate::{
     blockstore::txs::CommitBatch,
-    config::{GlobalConfig, KeypairsConfig},
+    config::GlobalConfig,
     execution::TransactionsResultWrapper,
     init::default::{DEFAULT_MINT_LAMPORTS, DEFAULT_STAKE_LAMPORTS, DEFAULT_VALIDATOR_LAMPORTS},
     tests::mock::{assert_result_balance, processor::process_transfers_ex},
     RollupStorage,
 };
 use anyhow::Result;
-use rollups_interface::l2::{bank::BankOperations, storage::StorageOperations};
+use igloo_interface::l2::{bank::BankOperations, storage::StorageOperations};
 use solana_sdk::{
     signature::Keypair,
     signer::Signer,
@@ -75,13 +75,9 @@ async fn init_with_all_default_works() -> Result<()> {
 
 #[test]
 fn init_with_given_config_works() -> Result<()> {
-    let mut config = GlobalConfig::new(&Path::new("data/config/ledger"))?;
-    config.keypairs = KeypairsConfig {
-        validator_key_path: Some("data/config/genesis/validator-identity.json".into()),
-        mint_key_path: Some("data/config/genesis/validator-stake-account.json".into()),
-        voting_key_path: Some("data/config/genesis/validator-vote-account.json".into()),
-        ..Default::default()
-    };
+    let ledger_path = Path::new("data/config/ledger");
+    let mut config = GlobalConfig::new(&ledger_path)?;
+    config.keypairs.set_default_path(ledger_path);
     let mut store = RollupStorage::new(config)?;
     store.init()?;
 
@@ -210,7 +206,7 @@ async fn storage_basic_process_works() -> Result<()> {
     assert_eq!(store.balance(&dave), TO_DAVE);
 
     // 3. save and close
-    store.force_save().await?;
+    store.confirm(store.current_height())?;
     store.close().await?;
 
     // 4. open again

@@ -1,6 +1,9 @@
-use crate::{error::BankError, Result, RollupStorage};
+use crate::{
+    error::{BankError, StorageError},
+    Result, RollupStorage,
+};
 use solana_runtime::{bank_forks::BankForks, installed_scheduler_pool::BankWithScheduler};
-use solana_sdk::{account::ReadableAccount, pubkey::Pubkey};
+use solana_sdk::{account::ReadableAccount, hash::Hash, pubkey::Pubkey};
 use std::{
     collections::HashSet,
     sync::{Arc, RwLock},
@@ -9,7 +12,57 @@ use std::{
 #[cfg(test)]
 mod tests;
 
+#[derive(Debug, Clone, Default)]
+pub struct SlotHead {
+    pub slot: u64,
+    pub hash: Option<Hash>,
+    pub timestamp: Option<i64>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct SlotInfo {
+    pub head: SlotHead,
+    pub parent: SlotHead,
+    pub store_height: Option<u64>,
+}
+
 impl RollupStorage {
+    pub fn get_slot_info(&self, slot: u64) -> Result<SlotInfo> {
+        let head = self.get_slot_head(slot)?;
+        let parent = self.get_slot_head(head.slot - 1)?;
+        let store_height = self.blockstore.highest_slot()?;
+        Ok(SlotInfo {
+            head,
+            parent,
+            store_height,
+        })
+    }
+
+    pub fn get_slot_head(&self, slot: u64) -> Result<SlotHead> {
+        let hash = { self.bank_forks.read().unwrap().get(slot) };
+        let timestamp = self.blockstore.get_rooted_block_time(slot).ok();
+        hash.map_or_else(
+            || {
+                Ok(SlotHead {
+                    slot,
+                    timestamp,
+                    ..Default::default()
+                })
+            },
+            |b| {
+                Ok(SlotHead {
+                    slot,
+                    hash: Some(b.hash()),
+                    timestamp,
+                })
+            },
+        )
+    }
+
+    pub fn get_root(&self) -> u64 {
+        self.bank_forks.read().unwrap().root()
+    }
+
     pub fn get_mixed_heights(&self) -> Result<(u64, Option<u64>)> {
         let bank_height = self.bank_forks.read().unwrap().highest_slot();
         let store_height = self.blockstore.highest_slot()?;
@@ -46,6 +99,14 @@ impl RollupStorage {
         Ok(removed)
     }
 
+    pub fn confirm(&mut self, slot: u64) -> Result<()> {
+        self.bank.freeze();
+        self.blockstore
+            .set_roots(std::iter::once(&slot))
+            .map_err(|e| StorageError::SetRootFailed(e.to_string()))?;
+        Ok(())
+    }
+
     pub fn set_root(
         &mut self,
         slot: u64,
@@ -53,7 +114,7 @@ impl RollupStorage {
     ) -> Result<Vec<BankWithScheduler>> {
         self.blockstore
             .set_roots(std::iter::once(&slot))
-            .map_err(|e| BankError::SetRootFailed(e.to_string()))?;
+            .map_err(|e| StorageError::SetRootFailed(e.to_string()))?;
         let removed_banks = self
             .bank_forks
             .write()

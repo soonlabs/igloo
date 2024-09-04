@@ -1,6 +1,6 @@
 use std::env;
 
-use rollups_interface::l2::executor::Init;
+use igloo_interface::l2::executor::Init;
 use solana_sdk::{
     account::ReadableAccount, clock::Clock, pubkey::Pubkey, sysvar::SysvarId,
     transaction::TransactionError,

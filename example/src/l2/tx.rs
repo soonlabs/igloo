@@ -1,4 +1,4 @@
-use rollups_interface::l2::Transaction;
+use igloo_interface::l2::Transaction;
 use solana_sdk::pubkey::Pubkey;
 
 use crate::l1::tx::DepositTx;

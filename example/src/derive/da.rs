@@ -1,5 +1,5 @@
 use crate::l1::attribute::PayloadAttributeImpl;
-use rollups_interface::derive::DaDerive;
+use igloo_interface::derive::DaDerive;
 use std::sync::Arc;
 use tokio::sync::{mpsc::Receiver, RwLock};
 

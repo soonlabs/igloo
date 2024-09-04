@@ -1,4 +1,4 @@
-use rollups_interface::l1::DepositTransaction;
+use igloo_interface::l1::DepositTransaction;
 use solana_sdk::pubkey::Pubkey;
 
 pub struct DepositTx {

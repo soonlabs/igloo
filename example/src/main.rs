@@ -1,8 +1,8 @@
 use anyhow::Result;
 use derive::{da::DaDeriveImpl, instant::InstantDeriveImpl};
+use igloo_interface::{l2::Engine, runner::Runner};
 use l2::batcher::Batcher;
 use mock::{chain::MockLayer1, stream::TxServer};
-use rollups_interface::{l2::Engine, runner::Runner};
 use runner::SimpleRunner;
 use std::path::Path;
 use tokio::sync::mpsc::channel;
@@ -27,7 +27,7 @@ async fn main() -> Result<()> {
     let da_driver = DaDeriveImpl::default();
 
     let (attribute_sender, attribute_receiver) = channel(1024);
-    let mut runner = SimpleRunner::new(Path::new("/tmp/rollups-example"), attribute_sender)?;
+    let mut runner = SimpleRunner::new(Path::new("/tmp/igloo-example"), attribute_sender)?;
 
     runner.register_instant(instanct_driver);
     runner.register_da(da_driver.clone());

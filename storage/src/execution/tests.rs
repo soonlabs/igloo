@@ -12,7 +12,7 @@ use crate::{
     RollupStorage,
 };
 use anyhow::Result;
-use rollups_interface::l2::{bank::BankOperations, storage::StorageOperations};
+use igloo_interface::l2::{bank::BankOperations, storage::StorageOperations};
 use solana_sdk::{signature::Keypair, signer::Signer, system_transaction};
 
 #[tokio::test]
