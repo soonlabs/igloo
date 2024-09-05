@@ -1,4 +1,4 @@
-use rollups_interface::l2::{bank::BankInfo, storage::TransactionSet};
+use igloo_interface::l2::{bank::BankInfo, storage::TransactionSet};
 use solana_entry::entry::Entry;
 use solana_runtime::{
     bank::{Bank, ExecutedTransactionCounts, NewBankOptions, TotalAccountsStats},

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use rollups_interface::l2::{bank::BankOperations, storage::StorageOperations};
+use igloo_interface::l2::{bank::BankOperations, storage::StorageOperations};
 use solana_runtime::bank::Bank;
 use solana_sdk::{
     pubkey::Pubkey, signature::Keypair, signer::Signer, system_transaction,

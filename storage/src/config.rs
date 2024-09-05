@@ -5,7 +5,7 @@ use std::{
     time::Duration,
 };
 
-use rollups_interface::l2::executor::Config;
+use igloo_interface::l2::executor::Config;
 use solana_accounts_db::{
     accounts_db::{AccountShrinkThreshold, AccountsDbConfig},
     accounts_index::AccountSecondaryIndexes,
@@ -22,7 +22,7 @@ use solana_sdk::{
 };
 use solana_svm::runtime_config::RuntimeConfig;
 
-use crate::{init::init_config, Result};
+use crate::{init::init_config, Result, RollupStorage};
 
 pub const MAX_GENESIS_ARCHIVE_UNPACKED_SIZE: u64 = 10 * 1024 * 1024; // 10 MiB
 
@@ -44,6 +44,12 @@ pub struct KeypairsConfig {
     pub mint_keypair: Option<Arc<Keypair>>,
     pub voting_key_path: Option<PathBuf>,
     pub voting_keypair: Option<Arc<Keypair>>,
+}
+
+impl RollupStorage {
+    pub fn keypairs(&self) -> &KeypairsConfig {
+        &self.config.keypairs
+    }
 }
 
 impl Config for GlobalConfig {}
@@ -156,6 +162,15 @@ impl Default for HistoryConfig {
 }
 
 impl KeypairsConfig {
+    pub fn set_default_path(&mut self, base: &Path) {
+        self.validator_key_path
+            .get_or_insert(base.join("../genesis/validator-identity.json"));
+        self.mint_key_path
+            .get_or_insert(base.join("../genesis/validator-stake-account.json"));
+        self.voting_key_path
+            .get_or_insert(base.join("../genesis/validator-vote-account.json"));
+    }
+
     pub fn init(&mut self) -> crate::Result<()> {
         Self::try_init(
             &mut self.validator_keypair,

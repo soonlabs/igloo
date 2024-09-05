@@ -1,4 +1,4 @@
-use rollups_interface::l1::BatchInfo;
+use igloo_interface::l1::BatchInfo;
 
 use super::L1Hash;
 

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use rollups_interface::l1::L1BlockInfo;
+use igloo_interface::l1::L1BlockInfo;
 
 use crate::l2::tx::L2Transaction;
 

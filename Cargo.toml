@@ -4,7 +4,16 @@ debug = true
 split-debuginfo = "packed"
 
 [workspace]
-members = ["example", "interface", "rpc", "storage", "svm/cli", "svm/executor"]
+members = [
+	"example",
+	"executor",
+	"interface",
+    "rpc"
+	"storage",
+	"svm/cli",
+	"svm/executor",
+	"validator",
+]
 resolver = "2"
 
 [workspace.package]
@@ -56,7 +65,9 @@ solana-metrics = { version = "2.0.7" }
 spl-token = "=6.0.0"
 spl-token-2022 = "=4.0.0"
 
-rollups-interface = { path = "interface" }
+igloo-interface = { path = "interface" }
+igloo-storage = { path = "storage" }
+igloo-validator = { path = "validator" }
 svm-executor = { path = "svm/executor" }
 
 [patch.crates-io]
@@ -66,3 +77,31 @@ solana-curve25519 = { git = "https://github.com/anza-xyz/agave.git", rev = "11b8
 solana-program = { git = "https://github.com/anza-xyz/agave.git", rev = "11b87c1ba32c1895898f2a17502417fccdf1a4c8" }
 solana-zk-sdk = { git = "https://github.com/anza-xyz/agave.git", rev = "11b87c1ba32c1895898f2a17502417fccdf1a4c8" }
 solana-zk-token-sdk = { git = "https://github.com/anza-xyz/agave.git", rev = "11b87c1ba32c1895898f2a17502417fccdf1a4c8" }
+
+## patches to use local versions, uncomment if needed
+# solana-program = { path = "../agave/sdk/program" }
+# solana-zk-sdk = { path = "../agave/zk-sdk" }
+# solana-zk-token-sdk = { path = "../agave/zk-token-sdk" }
+
+## patches to use local versions, uncomment if needed
+# solana-bpf-loader-program = { path = "../agave/programs/bpf_loader" }
+# solana-compute-budget = { path = "../agave/compute-budget" }
+# solana-program-runtime = { path = "../agave/program-runtime" }
+# solana-sdk = { path = "../agave/sdk" }
+# solana-svm = { path = "../agave/svm" }
+# solana-system-program = { path = "../agave/programs/system" }
+# solana-logger = { path = "../agave/logger" }
+# solana-test-validator = { path = "../agave/test-validator" }
+# solana-ledger = { path = "../agave/ledger" }
+# solana-runtime = { path = "../agave/runtime" }
+# solana-entry = { path = "../agave/entry" }
+# solana-accounts-db = { path = "../agave/accounts-db" }
+# solana-core = { path = "../agave/core" }
+# solana-stake-program = { path = "../agave/programs/stake" }
+# solana-measure = { path = "../agave/measure" }
+# solana-gossip = { path = "../agave/gossip" }
+# solana-streamer = { path = "../agave/streamer" }
+# solana-rpc = { path = "../agave/rpc" }
+# solana-transaction-status = { path = "../agave/transaction-status" }
+# solana-account-decoder = { path = "../agave/account-decoder" }
+# solana-metrics = { path = "../agave/metrics" }

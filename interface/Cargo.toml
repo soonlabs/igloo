@@ -1,5 +1,5 @@
 [package]
-name = "rollups-interface"
+name = "igloo-interface"
 version = "0.1.0"
 edition = "2021"
 

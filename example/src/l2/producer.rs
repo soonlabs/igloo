@@ -1,5 +1,5 @@
 use anyhow::{Ok, Result};
-use rollups_interface::{
+use igloo_interface::{
     l1::PayloadAttribute,
     l2::{executor::Init, Entry, Producer},
 };

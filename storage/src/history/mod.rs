@@ -3,7 +3,7 @@ use crate::{
     Result, RollupStorage,
 };
 use crossbeam_channel::unbounded;
-use rollups_interface::l2::storage::TransactionSet;
+use igloo_interface::l2::storage::TransactionSet;
 use solana_core::cache_block_meta_service::CacheBlockMetaService;
 use solana_ledger::{
     blockstore::Blockstore,

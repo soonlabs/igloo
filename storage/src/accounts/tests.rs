@@ -1,5 +1,5 @@
 use anyhow::Result;
-use rollups_interface::l2::{bank::BankOperations, storage::StorageOperations};
+use igloo_interface::l2::{bank::BankOperations, storage::StorageOperations};
 use solana_accounts_db::{
     accounts_db::{self, ACCOUNTS_DB_CONFIG_FOR_TESTING},
     accounts_index::AccountSecondaryIndexes,

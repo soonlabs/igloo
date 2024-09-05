@@ -3,7 +3,7 @@ use std::{
     sync::Arc,
 };
 
-use rollups_interface::l2::{Block, L2Head};
+use igloo_interface::l2::{Block, L2Head};
 use tokio::sync::RwLock;
 
 use super::{block::BlockImpl, head::L2HeadImpl, L2Hash, L2Height};

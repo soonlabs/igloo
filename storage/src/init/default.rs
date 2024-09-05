@@ -13,9 +13,9 @@ use solana_sdk::{
 };
 use std::path::Path;
 
-pub(crate) const DEFAULT_VALIDATOR_LAMPORTS: u64 = 10_000_000;
-pub(crate) const DEFAULT_MINT_LAMPORTS: u64 = 1_000_000_000;
-pub(crate) const DEFAULT_STAKE_LAMPORTS: u64 = 50_000_000;
+pub const DEFAULT_VALIDATOR_LAMPORTS: u64 = 10_000_000;
+pub const DEFAULT_MINT_LAMPORTS: u64 = 1_000_000_000;
+pub const DEFAULT_STAKE_LAMPORTS: u64 = 50_000_000;
 
 pub(crate) fn default_genesis_config(ledger_path: &Path) -> Result<(GenesisConfigInfo, Keypair)> {
     let validator_key = Keypair::new();

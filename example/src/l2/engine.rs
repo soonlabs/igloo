@@ -3,9 +3,7 @@ use solana_sdk::signature::Keypair;
 use std::{path::Path, sync::Arc};
 use tokio::sync::{mpsc::Sender, RwLock};
 
-use rollups_interface::l2::{
-    stream::TransactionStream, Block, Engine, EngineApi, L2Head, Producer,
-};
+use igloo_interface::l2::{stream::TransactionStream, Block, Engine, EngineApi, L2Head, Producer};
 
 use crate::l1::attribute::PayloadAttributeImpl;
 

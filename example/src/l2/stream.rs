@@ -1,4 +1,4 @@
-use rollups_interface::l2::stream::{BatchSettings, TransactionStream};
+use igloo_interface::l2::stream::{BatchSettings, TransactionStream};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 

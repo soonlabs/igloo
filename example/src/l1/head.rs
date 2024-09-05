@@ -1,4 +1,4 @@
-use rollups_interface::l1::L1Head;
+use igloo_interface::l1::L1Head;
 
 use super::{L1Hash, L1Height, L1Timestamp};
 
