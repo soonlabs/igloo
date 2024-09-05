@@ -5,14 +5,14 @@ split-debuginfo = "packed"
 
 [workspace]
 members = [
-	"example",
-	"executor",
-	"interface",
-    "rpc"
-	"storage",
-	"svm/cli",
-	"svm/executor",
-	"validator",
+    "example",
+    "executor",
+    "interface",
+    "rpc",
+    "storage",
+    "svm/cli",
+    "svm/executor",
+    "validator",
 ]
 resolver = "2"
 
