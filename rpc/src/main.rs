@@ -1,10 +1,12 @@
 #![allow(unused_variables)]
 
+use igloo_rpc::{AccountApi, BlockApi, SlotApi, TransactionApi};
+use jsonrpsee::core::RpcResult;
 use jsonrpsee::server::{RpcModule, Server};
-use jsonrpsee::types::Params;
+// use jsonrpsee::types::Params;
 use std::net::SocketAddr;
-// use std::sync::Arc;
-// use jsonrpsee::core::RpcResult;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -15,66 +17,61 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn run_server() -> anyhow::Result<SocketAddr> {
-    // Create a new RPC module
+    let account_api = Arc::new(Mutex::new(AccountApi::default()));
+    let slot_api = Arc::new(Mutex::new(SlotApi::default()));
+    let block_api = Arc::new(Mutex::new(BlockApi::default()));
+    let transaction_api = Arc::new(Mutex::new(TransactionApi::default()));
+
     let mut module = RpcModule::new(());
 
-    // /ping
-    module
-        .register_method("say_hello", |_, _, _| "pong")
-        .unwrap();
-    // status
-    module
-        .register_method("status", |_: Params, _, _| "Server is running")
-        .unwrap();
+    // Account API methods
+    module.register_async_method("getAccountInfo", move |params, _ctx, _extensions| {
+        let account_api = Arc::clone(&account_api);
+        async move {
+            let account_api = Arc::clone(&account_api);
+            let account_id: String = "foo".to_string();
+            let account_api = account_api.lock().await;
+            account_api.get_account_info(account_id).await
+        }
+    })?;
 
-    module
-        .register_method("getAccountInfo", |params, _, _| {
-            // TODO: Implement actual logic
-            "Account info for pubkey: "
-        })
-        .unwrap();
+    module.register_method("getMultipleAccounts", move |_, _, _| RpcResult::Ok("lo"))?;
 
-    module
-        .register_method("getMultipleAccounts", |params, _, _| {
-            // TODO: Implement actual logic
-            "Account info for multiple pubkeys: "
-        })
-        .unwrap();
+    // Slot API methods
+    module.register_async_method("getSlot", move |params, _ctx, _extensions| {
+        let slot_api = Arc::clone(&slot_api);
+        async move {
+            let slot_api = slot_api.lock().await;
+            slot_api.get_slot().await
+        }
+    })?;
 
-    module
-        .register_method("getSignaturesForAddress", |params, _, _| {
-            // TODO: Implement actual logic
-            "Signatures for address: "
-        })
-        .unwrap();
+    // Block API methods
+    module.register_async_method("getBlock", move |params, _ctx, _extensions| {
+        let block_api = Arc::clone(&block_api);
+        async move {
+            let block_api = block_api.lock().await;
+            block_api.get_block().await
+        }
+    })?;
 
-    module
-        .register_method("getTransaction", |params, _, _| {
-            // TODO: Implement actual logic
-            "Transaction info: "
-        })
-        .unwrap();
+    // module.register_async_method("getBlocks", move |params, _ctx, _extensions| {
+    //     let block_api = Arc::clone(&block_api);
+    //     async move {
+    //         let block_api = block_api.lock().await;
+    //         let (start_slot, end_slot): (u64, u64) = (0, 1);
+    //         block_api.get_blocks(start_slot, end_slot).await
+    //     }
+    // })?;
 
-    module
-        .register_method("getBlock", |params, _, _| {
-            // TODO: Implement actual logic
-            "Block info: "
-        })
-        .unwrap();
-
-    module
-        .register_method("getBlocks", |params, _, _| {
-            // TODO: Implement actual logic
-            "Blocks between slots: "
-        })
-        .unwrap();
-
-    module
-        .register_method("getSlot", |params, _, _| {
-            // TODO: Implement actual logic
-            "Current slot: "
-        })
-        .unwrap();
+    module.register_async_method("getTransaction", move |params, _ctx, _extensions| {
+        let transaction_api = Arc::clone(&transaction_api);
+        async move {
+            let transaction_api = transaction_api.lock().await;
+            let signature: String = "foo".to_string();
+            transaction_api.get_transaction(signature).await
+        }
+    })?;
 
     // Create and start the HTTP server
     let server = Server::builder().build("127.0.0.1:8080").await.unwrap();
