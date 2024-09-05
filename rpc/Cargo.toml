@@ -12,3 +12,13 @@ anyhow = { workspace = true }
 futures = { workspace = true }
 jsonrpsee = { workspace = true }
 tokio = { workspace = true }
+solana-sdk = { workspace = true }
+solana-account-decoder = { workspace = true }
+solana-transaction-status = { workspace = true }
+solana-program = { version = "2.0.7" }
+
+[patch.crates-io]
+solana-program = { git = "https://github.com/anza-xyz/agave.git", rev = "11b87c1ba32c1895898f2a17502417fccdf1a4c8" }
+
+[dev-dependencies]
+

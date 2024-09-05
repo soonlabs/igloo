@@ -2414,6 +2414,10 @@ dependencies = [
  "anyhow",
  "futures 0.3.30",
  "jsonrpsee",
+ "solana-account-decoder",
+ "solana-program",
+ "solana-sdk",
+ "solana-transaction-status",
  "tokio",
 ]
 
