@@ -2416,6 +2416,7 @@ dependencies = [
  "jsonrpsee",
  "solana-account-decoder",
  "solana-program",
+ "solana-rpc-client-api",
  "solana-sdk",
  "solana-transaction-status",
  "tokio",

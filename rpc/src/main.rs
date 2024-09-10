@@ -4,10 +4,12 @@ use igloo_rpc::{AccountApi, BlockApi, SlotApi, TransactionApi};
 use jsonrpsee::core::RpcResult;
 use jsonrpsee::server::{RpcModule, Server};
 // use jsonrpsee::types::Params;
+use solana_program::pubkey::Pubkey;
+use solana_rpc_client_api::config::RpcAccountInfoConfig;
 use std::net::SocketAddr;
+use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let server_addr = run_server().await?;
@@ -29,9 +31,11 @@ async fn run_server() -> anyhow::Result<SocketAddr> {
         let account_api = Arc::clone(&account_api);
         async move {
             let account_api = Arc::clone(&account_api);
-            let account_id: String = "foo".to_string();
+            let pubkey_str: String = "foo".to_string();
+            let pubkey = Pubkey::from_str(&pubkey_str).unwrap();
+            let config = Some(RpcAccountInfoConfig::default());
             let account_api = account_api.lock().await;
-            account_api.get_account_info(account_id).await
+            account_api.get_account_info(&pubkey, config).await
         }
     })?;
 

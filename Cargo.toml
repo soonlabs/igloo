@@ -64,6 +64,7 @@ solana-account-decoder = { version = "2.0.7" }
 solana-metrics = { version = "2.0.7" }
 spl-token = "=6.0.0"
 spl-token-2022 = "=4.0.0"
+solana-rpc-client-api = { version = "2.0.7" }
 
 igloo-interface = { path = "interface" }
 igloo-storage = { path = "storage" }

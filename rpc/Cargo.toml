@@ -16,6 +16,7 @@ solana-sdk = { workspace = true }
 solana-account-decoder = { workspace = true }
 solana-transaction-status = { workspace = true }
 solana-program = { version = "2.0.7" }
+solana-rpc-client-api = { workspace = true }
 
 [patch.crates-io]
 solana-program = { git = "https://github.com/anza-xyz/agave.git", rev = "11b87c1ba32c1895898f2a17502417fccdf1a4c8" }

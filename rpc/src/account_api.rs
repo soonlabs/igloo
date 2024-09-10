@@ -1,12 +1,39 @@
 use jsonrpsee::core::RpcResult;
+use solana_account_decoder::{UiAccount, UiAccountEncoding};
+use solana_program::pubkey::Pubkey;
+use solana_rpc_client_api::config::RpcAccountInfoConfig;
+use solana_sdk::account::AccountSharedData;
 
 #[derive(Default)]
 pub struct AccountApi;
 
 impl AccountApi {
-    pub async fn get_account_info(&self, account_id: String) -> RpcResult<String> {
+    pub async fn get_account_info(
+        &self,
+        pubkey: &Pubkey,
+        config: Option<RpcAccountInfoConfig>,
+    ) -> RpcResult<String> {
         // Simulate fetching account info
-        Ok(format!("Account info for: {}", account_id))
+        let RpcAccountInfoConfig {
+            encoding,
+            data_slice,
+            commitment,
+            min_context_slot,
+        } = config.unwrap_or_default();
+
+        let encoding = encoding.unwrap_or(UiAccountEncoding::Binary);
+
+        // let account: AccountSharedData = AccountSharedData::default();
+        //
+        // let ui_account = UiAccount::encode(
+        //     pubkey, account, encoding, None, data_slice,
+        // ));
+        //
+        // let response = new_response!(ui_account);
+        // Ok(new_response(ui_account));
+
+        // TODO: SPL Token
+        Ok(format!("Account info for: {}", pubkey.to_string()))
     }
 
     pub async fn get_multiple_accounts(&self, account_ids: Vec<String>) -> RpcResult<Vec<String>> {
@@ -17,6 +44,28 @@ impl AccountApi {
             .collect();
         Ok(results)
     }
+
+    // fn encode_account(
+    //     account: &AccountSharedData,
+    //     pubkey: &Pubkey,
+    //     encoding: UiAccountEncoding,
+    //     data_slice: Option<(usize, usize)>,
+    // ) -> UiAccount {
+    //     let data = account.data();
+    //     let data = data_slice
+    //         .map(|(offset, length)| data[offset..offset + length].to_vec())
+    //         .unwrap_or_else(|| data.to_vec());
+    //
+    //     UiAccount {
+    //         lamports: account.lamports(),
+    //         owner: account.owner().to_string(),
+    //         executable: account.executable(),
+    //         rent_epoch: account.rent_epoch(),
+    //         data: encoding.encode(data),
+    //         pubkey: pubkey.to_string(),
+    //         data_len: data.len() as u64,
+    //     }
+    // }
 }
 
 #[cfg(test)]
@@ -69,10 +118,11 @@ mod tests {
     async fn test_get_account_info() {
         // Create the AccountApi with the mocked client
         let account_api = AccountApi;
-
+        let pubkey = Pubkey::new_from_array([0u8; 32]);
+        let config = RpcAccountInfoConfig::default();
         // Call get_account_info
         let result = account_api
-            .get_account_info("TestPubkey11111111111111111111111111111".to_string())
+            .get_account_info(&pubkey, Some(config))
             .await
             .unwrap();
         assert_eq!(
