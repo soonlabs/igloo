@@ -5,7 +5,6 @@ use std::{
     time::Duration,
 };
 
-use igloo_interface::l2::executor::Config;
 use solana_accounts_db::{
     accounts_db::{AccountShrinkThreshold, AccountsDbConfig},
     accounts_index::AccountSecondaryIndexes,
@@ -52,8 +51,6 @@ impl RollupStorage {
     }
 }
 
-impl Config for GlobalConfig {}
-
 impl GlobalConfig {
     pub fn new(ledger_path: &Path) -> Result<Self> {
         let storage = init_config(ledger_path)?;
@@ -66,7 +63,7 @@ impl GlobalConfig {
     }
 
     pub fn new_temp(ledger_path: &Path) -> Result<Self> {
-        let storage = init_config(&ledger_path)?;
+        let storage = init_config(ledger_path)?;
         Ok(Self {
             ledger_path: ledger_path.to_path_buf(),
             storage,
@@ -76,7 +73,7 @@ impl GlobalConfig {
     }
 
     pub fn new_dev(ledger_path: &Path) -> Result<Self> {
-        let storage = init_config(&ledger_path)?;
+        let storage = init_config(ledger_path)?;
         Ok(Self {
             ledger_path: ledger_path.to_path_buf(),
             storage,
@@ -164,11 +161,11 @@ impl Default for HistoryConfig {
 impl KeypairsConfig {
     pub fn set_default_path(&mut self, base: &Path) {
         self.validator_key_path
-            .get_or_insert(base.join("../genesis/validator-identity.json"));
+            .get_or_insert(base.join("validator-identity.json"));
         self.mint_key_path
-            .get_or_insert(base.join("../genesis/validator-stake-account.json"));
+            .get_or_insert(base.join("validator-stake-account.json"));
         self.voting_key_path
-            .get_or_insert(base.join("../genesis/validator-vote-account.json"));
+            .get_or_insert(base.join("validator-vote-account.json"));
     }
 
     pub fn init(&mut self) -> crate::Result<()> {

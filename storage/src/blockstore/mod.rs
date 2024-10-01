@@ -11,6 +11,10 @@ pub mod txs;
 const DEFAULT_NUM_HASHES: u64 = 2;
 
 impl RollupStorage {
+    pub fn get_storage_root(&self) -> u64 {
+        self.blockstore.max_root()
+    }
+
     pub(crate) fn aligne_blockstore_with_bank_forks(&self) -> Result<()> {
         blockstore_processor::process_blockstore_from_root(
             &self.blockstore,
@@ -57,20 +61,31 @@ impl RollupStorage {
         )
     }
 
-    pub(crate) fn transactions_to_entries(
+    pub(crate) fn transactions_to_entry(
         &self,
         transactions: Vec<VersionedTransaction>,
-    ) -> Result<Vec<Entry>> {
-        let mut start_hash = self
-            .bank
-            .parent()
-            .ok_or(BankError::BankNotExists(self.bank.parent_slot()))?
-            .last_blockhash();
-        let entry = self.new_entry(&start_hash, DEFAULT_NUM_HASHES, transactions);
-        start_hash = entry.hash;
+        start_hash: Option<Hash>,
+    ) -> Result<Entry> {
+        let start_hash = match start_hash {
+            Some(start_hash) => start_hash,
+            None => self
+                .bank
+                .parent()
+                .ok_or(BankError::BankNotExists(self.bank.parent_slot()))?
+                .last_blockhash(),
+        };
+        Ok(self.new_entry(&start_hash, DEFAULT_NUM_HASHES, transactions))
+    }
 
-        let mut entries = vec![entry];
-        for _ in 0..self.config.genesis.ticks_per_slot {
+    pub(crate) fn complete_entries(&self, data_entries: Vec<Entry>) -> Result<Vec<Entry>> {
+        let last_entry = data_entries.last().ok_or(Error::NoEntries)?;
+        let mut start_hash = last_entry.hash;
+
+        let tick_count = self.config.genesis.ticks_per_slot
+            - data_entries.iter().filter(|entry| entry.is_tick()).count() as u64;
+
+        let mut entries = data_entries;
+        for _ in 0..tick_count {
             let entry = self.new_entry(&start_hash, DEFAULT_NUM_HASHES, vec![]);
             start_hash = entry.hash;
             entries.push(entry);

@@ -132,10 +132,9 @@ impl StorageBackground {
             accounts_package_sender,
         };
         let pruned_banks_request_handler = PrunedBanksRequestHandler {
-            pruned_banks_receiver: hub
-                .pruned_banks_receiver
-                .take()
-                .ok_or(Error::InitCommon(format!("pruned banks receiver is None")))?,
+            pruned_banks_receiver: hub.pruned_banks_receiver.take().ok_or(Error::InitCommon(
+                "pruned banks receiver is None".to_string(),
+            ))?,
         };
 
         let last_full_snapshot_slot = starting_snapshot_hashes.map(|x| x.full.0 .0);

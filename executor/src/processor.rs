@@ -1,6 +1,6 @@
-use super::Processor;
 use crate::Result;
-use igloo_validator::{settings::Settings, BankValidator, SvmValidator};
+use igloo_verifier::settings::Settings;
+use igloo_verifier::BankVerifier;
 use solana_runtime::bank::Bank;
 use solana_sdk::transaction::SanitizedTransaction;
 use solana_svm::transaction_processor::{
@@ -9,36 +9,35 @@ use solana_svm::transaction_processor::{
 };
 use std::{borrow::Cow, sync::Arc};
 
-pub struct BankProcessor {
+pub struct TransactionProcessor {
     bank: Arc<Bank>,
     settings: Settings,
 }
 
-impl Processor for BankProcessor {
-    fn process<'a>(
+impl TransactionProcessor {
+    pub fn new(bank: Arc<Bank>, settings: Settings) -> Self {
+        Self { bank, settings }
+    }
+
+    pub fn process(
         &self,
-        transactions: Cow<'a, [SanitizedTransaction]>,
+        transactions: Cow<[SanitizedTransaction]>,
     ) -> Result<LoadAndExecuteSanitizedTransactionsOutput> {
-        let validator = BankValidator::new(self.bank.clone(), self.settings.clone());
-        let result = validator.get_batch_results(transactions.clone());
+        // TODO: There are some bug in `BankVerifier`, we need to fix it in future
+        let validator = BankVerifier::new(self.bank.clone(), self.settings.clone());
+        let results = validator.get_batch_results(transactions.clone());
 
         // use the bank's transaction processor to process the transactions
         let transaction_processor = self.bank.get_transaction_processor();
         let output = transaction_processor.load_and_execute_sanitized_transactions(
             self.bank.as_ref(),
             &transactions,
-            result,
+            results,
             &self.environment(),
             &self.processing_config(),
         );
 
         Ok(output)
-    }
-}
-
-impl BankProcessor {
-    pub fn new(bank: Arc<Bank>, settings: Settings) -> Self {
-        Self { bank, settings }
     }
 
     fn environment(&self) -> TransactionProcessingEnvironment {
@@ -49,7 +48,7 @@ impl BankProcessor {
             epoch_total_stake: self.bank.epoch_total_stake(self.bank.epoch()),
             epoch_vote_accounts: self.bank.epoch_vote_accounts(self.bank.epoch()),
             feature_set: Arc::clone(&self.bank.feature_set),
-            fee_structure: Some(self.bank.fee_structure()),
+            fee_structure: Some(&self.settings.fee_structure),
             lamports_per_signature,
             rent_collector: Some(self.bank.rent_collector()),
         };
