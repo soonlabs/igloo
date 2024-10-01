@@ -4,6 +4,7 @@ pub mod error;
 pub mod processor;
 #[cfg(test)]
 mod tests;
+mod scheduling;
 
 pub use {
     engine::Engine,

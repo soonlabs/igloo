@@ -24,6 +24,11 @@ solana-sdk = { workspace = true }
 solana-svm = { workspace = true }
 solana-runtime = { workspace = true }
 solana-core = { workspace = true }
+solana-program = { workspace = true}
 
 [dev-dependencies]
 anyhow = { workspace = true }
+
+[[bin]]
+name = "scheduling-simulation"
+path = "bin/scheduling_simulation.rs"

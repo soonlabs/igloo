@@ -20,9 +20,9 @@ impl SvmValidator for BankValidator {
 
     type TransactionCheckResult = TransactionCheckResult;
 
-    fn get_batch_results<'a>(
+    fn get_batch_results(
         &self,
-        transactions: std::borrow::Cow<'a, [Self::Transaction]>,
+        transactions: std::borrow::Cow<[Self::Transaction]>,
     ) -> Vec<Self::TransactionCheckResult> {
         let transaction_results = if self.settings.switchs.tx_sanity_check {
             self.get_transactions_sanity_results(&transactions)

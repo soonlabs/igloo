@@ -20,6 +20,7 @@ use solana_runtime::{
     accounts_background_service::AccountsBackgroundService, bank_forks::BankForks,
     snapshot_config::SnapshotConfig, snapshot_hash::StartingSnapshotHashes,
 };
+use solana_sdk::account::AccountSharedData;
 use solana_sdk::{signature::Keypair, signer::Signer, timing::timestamp};
 use solana_streamer::socket::SocketAddrSpace;
 use std::{
@@ -146,7 +147,16 @@ fn load_blockstore(
             Ok(genesis_config) => Ok(genesis_config),
             Err(err) => {
                 if cfg.allow_default_genesis {
-                    let (genesis_config, keypair) = default_genesis_config(&cfg.ledger_path)?;
+                    let init_accounts = cfg
+                        .genesis
+                        .accounts
+                        .iter()
+                        .map(|(key, account)| {
+                            (key.clone(), AccountSharedData::from(account.clone()))
+                        })
+                        .collect::<Vec<_>>();
+
+                    let (genesis_config, keypair) = default_genesis_config(&cfg.ledger_path, init_accounts)?;
                     cfg.keypairs = KeypairsConfig {
                         validator_keypair: Some(Arc::new(keypair)),
                         mint_keypair: Some(Arc::new(genesis_config.mint_keypair)),

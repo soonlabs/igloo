@@ -15,9 +15,9 @@ pub struct BankProcessor {
 }
 
 impl Processor for BankProcessor {
-    fn process<'a>(
+    fn process(
         &self,
-        transactions: Cow<'a, [SanitizedTransaction]>,
+        transactions: Cow<[SanitizedTransaction]>,
     ) -> Result<LoadAndExecuteSanitizedTransactionsOutput> {
         let validator = BankValidator::new(self.bank.clone(), self.settings.clone());
         let result = validator.get_batch_results(transactions.clone());
