@@ -1,4 +1,4 @@
-use crate::{error::TicksError, settings::Settings, Result, SvmValidator, TransactionChecks};
+use crate::{error::TicksError, settings::Settings};
 use solana_entry::entry::{Entry, EntrySlice};
 use solana_runtime::{bank::Bank, transaction_batch::TransactionBatch};
 use solana_sdk::transaction::{
@@ -9,69 +9,21 @@ use solana_svm::{
 };
 use std::{borrow::Cow, sync::Arc};
 
+pub mod error;
+pub mod settings;
+
+pub use error::{Error, Result};
+
+#[macro_use]
+extern crate log;
+
 #[derive(Clone)]
-pub struct BankValidator {
+pub struct BankVerifier {
     bank: Arc<Bank>,
     settings: Settings,
 }
 
-impl SvmValidator for BankValidator {
-    type Transaction = SanitizedTransaction;
-
-    type TransactionCheckResult = TransactionCheckResult;
-
-    fn get_batch_results<'a>(
-        &self,
-        transactions: std::borrow::Cow<'a, [Self::Transaction]>,
-    ) -> Vec<Self::TransactionCheckResult> {
-        let transaction_results = if self.settings.switchs.tx_sanity_check {
-            self.get_transactions_sanity_results(&transactions)
-        } else {
-            transactions.iter().map(|_| Ok(())).collect()
-        };
-
-        let batch = self.batch_and_verify_conflicts(transactions, transaction_results.into_iter());
-        let result = self.validate_batch(&batch);
-        result
-    }
-}
-
-impl TransactionChecks for BankValidator {
-    type Transaction = SanitizedTransaction;
-
-    type Error = crate::Error;
-
-    fn transactions_sanity_check(
-        &self,
-        txs: &[Self::Transaction],
-    ) -> std::result::Result<(), Self::Error> {
-        txs.iter()
-            .map(|tx| {
-                self.bank
-                    .fully_verify_transaction(tx.to_versioned_transaction())
-            })
-            .collect::<std::result::Result<Vec<_>, TransactionError>>()?;
-        Ok(())
-    }
-
-    fn transactions_conflict_check(
-        &self,
-        txs: &[Self::Transaction],
-    ) -> std::result::Result<(), Self::Error> {
-        let tx_account_lock_limit = self.bank.get_transaction_account_lock_limit();
-        let results = self
-            .bank
-            .rc
-            .accounts
-            .lock_accounts(txs.iter(), tx_account_lock_limit);
-        results
-            .into_iter()
-            .collect::<std::result::Result<Vec<_>, TransactionError>>()?;
-        Ok(())
-    }
-}
-
-impl BankValidator {
+impl BankVerifier {
     pub fn new(bank: Arc<Bank>, settings: Settings) -> Self {
         Self { bank, settings }
     }
@@ -87,7 +39,7 @@ impl BankValidator {
                     .fully_verify_transaction(tx.to_versioned_transaction())?;
                 if resanitized_tx != *tx {
                     // Sanitization before/after epoch give different transaction data - do not execute.
-                    return Err(TransactionError::ResanitizationNeeded.into());
+                    return Err(TransactionError::ResanitizationNeeded);
                 }
                 Ok(())
             })
@@ -122,7 +74,11 @@ impl BankValidator {
         } else {
             transaction_results.map(|_| Ok(())).collect()
         };
-        TransactionBatch::new(lock_result, &self.bank, sanitized_txs)
+        let mut result = TransactionBatch::new(lock_result, &self.bank, sanitized_txs);
+        if !self.settings.switchs.txs_conflict_check {
+            result.set_needs_unlock(false);
+        }
+        result
     }
 
     pub fn validate_batch(&self, batch: &TransactionBatch) -> Vec<TransactionCheckResult> {
@@ -180,6 +136,43 @@ impl BankValidator {
             return Err(TicksError::InvalidTickHashCount.into());
         }
 
+        Ok(())
+    }
+
+    pub fn get_batch_results(
+        &self,
+        transactions: Cow<[SanitizedTransaction]>,
+    ) -> Vec<TransactionCheckResult> {
+        let transaction_results = if self.settings.switchs.tx_sanity_check {
+            self.get_transactions_sanity_results(&transactions)
+        } else {
+            transactions.iter().map(|_| Ok(())).collect()
+        };
+
+        let batch = self.batch_and_verify_conflicts(transactions, transaction_results.into_iter());
+        self.validate_batch(&batch)
+    }
+
+    pub fn transactions_sanity_check(&self, txs: &[SanitizedTransaction]) -> Result<()> {
+        txs.iter()
+            .map(|tx| {
+                self.bank
+                    .fully_verify_transaction(tx.to_versioned_transaction())
+            })
+            .collect::<std::result::Result<Vec<_>, TransactionError>>()?;
+        Ok(())
+    }
+
+    pub fn transactions_conflict_check(&self, txs: &[SanitizedTransaction]) -> Result<()> {
+        let tx_account_lock_limit = self.bank.get_transaction_account_lock_limit();
+        let results = self
+            .bank
+            .rc
+            .accounts
+            .lock_accounts(txs.iter(), tx_account_lock_limit);
+        results
+            .into_iter()
+            .collect::<std::result::Result<Vec<_>, TransactionError>>()?;
         Ok(())
     }
 }

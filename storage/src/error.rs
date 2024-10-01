@@ -21,6 +21,12 @@ pub enum Error {
     #[error("Keypairs config missing validator keypair")]
     KeypairsConfigMissingValidatorKeypair,
 
+    #[error("Commit batch and results not match")]
+    CommitBachAndResultsNotMatch,
+
+    #[error("No entries")]
+    NoEntries,
+
     #[error(transparent)]
     SolanaBlockstoreError(#[from] BlockstoreError),
 
@@ -56,6 +62,9 @@ pub enum StorageError {
 
     #[error("Blockstore set root failed: {0}")]
     SetRootFailed(String),
+
+    #[error("Account not found")]
+    AccountNotFound,
 }
 
 #[derive(Debug, Error)]
@@ -77,4 +86,7 @@ pub enum BankError {
 pub enum AccountDbError {
     #[error("Failed to scan accounts: {0}")]
     FailedToScanAccounts(String),
+
+    #[error("Convert transaction error: {0}")]
+    ConvertTxError(String),
 }

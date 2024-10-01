@@ -11,7 +11,7 @@ members = [
 	"storage",
 	"svm/cli",
 	"svm/executor",
-	"validator",
+	"verifier",
 ]
 resolver = "2"
 
@@ -38,33 +38,37 @@ crossbeam-channel = "0.5.13"
 tempfile = "3.3.0"
 assert_matches = "1.5.0"
 
-solana-bpf-loader-program = { version = "2.0.7" }
-solana-compute-budget = { version = "2.0.7" }
-solana-program-runtime = { version = "2.0.7" }
-solana-sdk = { version = "2.0.7" }
-solana-svm = { version = "2.0.7" }
-solana-system-program = { version = "2.0.7" }
-solana-logger = { version = "2.0.7" }
-solana-test-validator = { version = "2.0.7" }
-solana-ledger = { version = "2.0.7" }
-solana-runtime = { version = "2.0.7" }
-solana-entry = { version = "2.0.7" }
-solana-accounts-db = { version = "2.0.7" }
-solana-core = { version = "2.0.7" }
-solana-stake-program = { version = "2.0.7" }
-solana-measure = { version = "2.0.7" }
-solana-gossip = { version = "2.0.7" }
-solana-streamer = { version = "2.0.7" }
-solana-rpc = { version = "2.0.7" }
-solana-transaction-status = { version = "2.0.7" }
-solana-account-decoder = { version = "2.0.7" }
-solana-metrics = { version = "2.0.7" }
+solana-bpf-loader-program = { version = "=2.0.7" }
+solana-compute-budget = { version = "=2.0.7" }
+solana-program-runtime = { version = "=2.0.7" }
+solana-sdk = { version = "=2.0.7" }
+solana-svm = { version = "=2.0.7" }
+solana-system-program = { version = "=2.0.7" }
+solana-logger = { version = "=2.0.7" }
+solana-test-validator = { version = "=2.0.7" }
+solana-ledger = { version = "=2.0.7" }
+solana-runtime = { version = "=2.0.7" }
+solana-entry = { version = "=2.0.7" }
+solana-accounts-db = { version = "=2.0.7" }
+solana-core = { version = "=2.0.7" }
+solana-stake-program = { version = "=2.0.7" }
+solana-measure = { version = "=2.0.7" }
+solana-gossip = { version = "=2.0.7" }
+solana-streamer = { version = "=2.0.7" }
+solana-rpc = { version = "=2.0.7" }
+solana-transaction-status = { version = "=2.0.7" }
+solana-account-decoder = { version = "=2.0.7" }
+solana-metrics = { version = "=2.0.7" }
+solana-client = { version = "=2.0.7" }
+solana-connection-cache = { version = "=2.0.7" }
+solana-send-transaction-service = { version = "=2.0.7" }
 spl-token = "=6.0.0"
 spl-token-2022 = "=4.0.0"
+async-trait = "0.1.80"
 
 igloo-interface = { path = "interface" }
 igloo-storage = { path = "storage" }
-igloo-validator = { path = "validator" }
+igloo-verifier = { path = "verifier" }
 svm-executor = { path = "svm/executor" }
 
 [patch.crates-io]

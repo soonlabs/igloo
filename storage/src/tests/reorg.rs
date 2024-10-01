@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use igloo_interface::l2::{bank::BankOperations, storage::StorageOperations};
 use solana_runtime::bank::Bank;
 use solana_sdk::{
     pubkey::Pubkey, signature::Keypair, signer::Signer, system_transaction,
@@ -49,7 +48,7 @@ async fn reorg_works() -> Result<()> {
     ///                \   |
     /// slot 1          \  * (B) <-- highest confirmed root
     ///                  \ |
-    /// slot 0             * (A)  
+    /// slot 0             * (A)
     const FEE: u64 = 5000;
 
     let bank0 = store.bank.clone();
@@ -236,6 +235,7 @@ async fn reorg_works() -> Result<()> {
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn new_slot_with_two_txs(
     bank: Arc<Bank>,
     store: &mut RollupStorage,
@@ -251,13 +251,13 @@ async fn new_slot_with_two_txs(
         system_transaction::transfer(&tx2_from, &tx2_to, tx2_amount, bank.last_blockhash()),
     ]
     .into_iter()
-    .map(|tx| SanitizedTransaction::from_transaction_for_tests(tx))
+    .map(SanitizedTransaction::from_transaction_for_tests)
     .collect::<Vec<_>>();
-    let results = process_transfers_ex(&store, origin_txs.clone());
+    let results = process_transfers_ex(store, origin_txs.clone());
     store
         .commit(
-            TransactionsResultWrapper { output: results },
-            CommitBatch::new(origin_txs.clone().into()),
+            vec![TransactionsResultWrapper { output: results }],
+            vec![CommitBatch::new(origin_txs.clone().into())],
         )
         .await?;
 

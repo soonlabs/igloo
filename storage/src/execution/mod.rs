@@ -1,5 +1,5 @@
+use crate::Error;
 use crate::{blockstore::txs::CommitBatch, Result, RollupStorage};
-use igloo_interface::l2::storage::{TransactionSet, TransactionsResult};
 use solana_sdk::transaction::{SanitizedTransaction, VersionedTransaction};
 use solana_svm::{
     transaction_processor::LoadAndExecuteSanitizedTransactionsOutput,
@@ -16,23 +16,33 @@ pub struct TransactionsResultWrapper {
 impl RollupStorage {
     pub(crate) fn commit_block(
         &mut self,
-        result: TransactionsResultWrapper,
-        origin: &CommitBatch,
-    ) -> Result<TransactionResults> {
-        let executed_txs = result.success_txs(origin.transactions());
-        let entries = self.transactions_to_entries(executed_txs)?;
+        result: Vec<TransactionsResultWrapper>,
+        origin: Vec<CommitBatch>,
+    ) -> Result<Vec<TransactionResults>> {
+        if result.len() != origin.len() {
+            return Err(Error::CommitBachAndResultsNotMatch);
+        }
 
-        let bank_result = self.bank_commit(result, &origin, &entries)?;
+        // TODO: process entries in parallel in scheduler version
+
+        let mut data_entries = vec![];
+        let mut start_hash = None;
+        for (result, origin) in result.iter().zip(origin.iter()) {
+            let executed_txs = result.success_txs(origin.transactions());
+            let entry = self.transactions_to_entry(executed_txs, start_hash)?;
+            start_hash = Some(entry.hash);
+            data_entries.push(entry);
+        }
+        let entries = self.complete_entries(data_entries)?;
+
+        let bank_result = self.bank_commit(result, origin, &entries)?;
         self.blockstore_save(entries)?;
         Ok(bank_result)
     }
 }
 
-impl TransactionsResult for TransactionsResultWrapper {
-    type SuccessIn = SanitizedTransaction;
-    type SuccessOut = VersionedTransaction;
-
-    fn success_txs(&self, extras: &[Self::SuccessIn]) -> Vec<Self::SuccessOut> {
+impl TransactionsResultWrapper {
+    pub fn success_txs(&self, extras: &[SanitizedTransaction]) -> Vec<VersionedTransaction> {
         self.output
             .execution_results
             .iter()
