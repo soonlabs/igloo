@@ -1,7 +1,10 @@
+use solana_sdk::fee::FeeStructure;
+
 #[derive(Debug, Clone)]
 pub struct Settings {
     pub max_age: usize,
     pub switchs: Switchs,
+    pub fee_structure: FeeStructure,
 }
 
 impl Default for Settings {
@@ -9,6 +12,7 @@ impl Default for Settings {
         Self {
             max_age: 150, // set default max_age from solana
             switchs: Default::default(),
+            fee_structure: FeeStructure::new(0.0000005, 0.0, vec![(1_400_000, 0.0)]),
         }
     }
 }

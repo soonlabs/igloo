@@ -1,4 +1,3 @@
-use igloo_interface::l2::storage::TransactionSet;
 use solana_account_decoder::{
     parse_account_data::SplTokenAdditionalData,
     parse_token::{is_known_spl_token_id, token_amount_to_ui_amount_v2, UiTokenAmount},
@@ -25,7 +24,7 @@ struct TokenBalanceData {
 }
 
 pub struct CommitBatch<'a> {
-    sanitized_txs: Cow<'a, [SanitizedTransaction]>,
+    pub sanitized_txs: Cow<'a, [SanitizedTransaction]>,
     mint_decimals: HashMap<Pubkey, u8>,
     pub transaction_indexes: Vec<usize>,
 }
@@ -48,6 +47,10 @@ impl<'a> CommitBatch<'a> {
             sanitized_txs,
             mint_decimals: Default::default(),
         }
+    }
+
+    pub fn transactions(&self) -> &[SanitizedTransaction] {
+        &self.sanitized_txs
     }
 
     pub fn collect_balances(&self, bank: Arc<Bank>) -> TransactionBalances {
@@ -163,13 +166,5 @@ fn get_mint_decimals(bank: &Bank, mint: &Pubkey) -> Option<u8> {
             .ok()?;
 
         Some(decimals)
-    }
-}
-
-impl<'a> TransactionSet for CommitBatch<'a> {
-    type Transaction = SanitizedTransaction;
-
-    fn transactions(&self) -> &[Self::Transaction] {
-        &self.sanitized_txs
     }
 }

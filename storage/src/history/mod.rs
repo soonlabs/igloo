@@ -3,7 +3,6 @@ use crate::{
     Result, RollupStorage,
 };
 use crossbeam_channel::unbounded;
-use igloo_interface::l2::storage::TransactionSet;
 use solana_core::cache_block_meta_service::CacheBlockMetaService;
 use solana_ledger::{
     blockstore::Blockstore,
@@ -17,7 +16,7 @@ use solana_runtime::bank::TransactionBalancesSet;
 use solana_sdk::{
     clock::Slot, rent_debits::RentDebits, signature::Signature, transaction::SanitizedTransaction,
 };
-use solana_svm::transaction_results::TransactionExecutionResult;
+use solana_svm::transaction_results::{TransactionExecutionResult, TransactionResults};
 use solana_transaction_status::{
     token_balances::TransactionTokenBalancesSet, ConfirmedTransactionWithStatusMeta,
 };
@@ -67,34 +66,34 @@ impl RollupStorage {
         .map_err(|e| e.into())
     }
 
-    pub fn commit_with_history(
+    pub fn single_batch_commit_with_history(
         &mut self,
         result: TransactionsResultWrapper,
         mut origin: CommitBatch,
-    ) -> Result<()> {
+    ) -> Result<TransactionResults> {
         let execution_results = result.output.execution_results.clone();
 
         let pre_balances = origin.collect_balances(self.bank.clone());
         let pre_token_balances = origin.collect_token_balances(self.bank.clone());
 
-        let bank_result = self.commit_block(result, &origin)?;
+        let batch_result = self.single_batch_commit(result, &origin)?;
 
         let post_balances = origin.collect_balances(self.bank.clone());
         let post_token_balances = origin.collect_token_balances(self.bank.clone());
         let history_info = TransactionBatchHistoryInfo {
-            transactions: origin.transactions().to_vec(),
+            transactions: origin.sanitized_txs.to_vec(),
             execution_results,
             balances: TransactionBalancesSet::new(pre_balances, post_balances),
             token_balances: TransactionTokenBalancesSet::new(
                 pre_token_balances,
                 post_token_balances,
             ),
-            transaction_indexes: origin.transaction_indexes.clone(),
-            rent_debits: bank_result.rent_debits,
+            transaction_indexes: origin.transaction_indexes,
+            rent_debits: batch_result.rent_debits.clone(),
         };
         self.on_block_complete(history_info);
 
-        Ok(())
+        Ok(batch_result)
     }
 
     pub fn notify_block_complete(&self) {

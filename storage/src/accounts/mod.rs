@@ -1,4 +1,3 @@
-use igloo_interface::l2::{bank::BankInfo, storage::TransactionSet};
 use solana_entry::entry::Entry;
 use solana_runtime::{
     bank::{Bank, ExecutedTransactionCounts, NewBankOptions, TotalAccountsStats},
@@ -10,7 +9,7 @@ use solana_sdk::{
     account::{AccountSharedData, ReadableAccount},
     clock::Slot,
     pubkey::Pubkey,
-    transaction::SanitizedTransaction,
+    transaction::{SanitizedTransaction, VersionedTransaction},
 };
 use solana_svm::{
     transaction_processor::LoadAndExecuteSanitizedTransactionsOutput,
@@ -22,7 +21,7 @@ use crate::{
     blockstore::txs::CommitBatch,
     error::{AccountDbError, BankError},
     execution::TransactionsResultWrapper,
-    Result, RollupStorage,
+    BankInfo, Result, RollupStorage,
 };
 
 #[cfg(test)]
@@ -69,8 +68,8 @@ impl RollupStorage {
             &ledger_path,
             &bank,
             None,
-            &ledger_path.join("full"),
-            &ledger_path.join("incremental"),
+            ledger_path.join("full"),
+            ledger_path.join("incremental"),
             ArchiveFormat::from_cli_arg("zstd")
                 .ok_or(BankError::Common("Unsupported archive format".to_string()))?,
         )
@@ -106,9 +105,29 @@ impl RollupStorage {
 
     pub(crate) fn bank_commit(
         &mut self,
+        results: Vec<TransactionsResultWrapper>,
+        batches: Vec<CommitBatch>,
+        entries: &[Entry],
+    ) -> Result<Vec<TransactionResults>> {
+        let mut rtn = vec![];
+        for (result, batch) in results.into_iter().zip(batches) {
+            let result = if self.enable_history() {
+                self.single_batch_commit_with_history(result, batch)?
+            } else {
+                self.single_batch_commit(result, &batch)?
+            };
+
+            rtn.push(result);
+        }
+
+        self.register_ticks(entries)?;
+        Ok(rtn)
+    }
+
+    pub(crate) fn single_batch_commit(
+        &mut self,
         mut result: TransactionsResultWrapper,
         batch: &CommitBatch,
-        entries: &[Entry],
     ) -> Result<TransactionResults> {
         // In order to avoid a race condition, leaders must get the last
         // blockhash *before* recording transactions because recording
@@ -124,23 +143,42 @@ impl RollupStorage {
         let result = self.bank.commit_transactions(
             batch.transactions(),
             &mut result.output.loaded_transactions,
-            result.output.execution_results,
+            result.output.execution_results.clone(),
             last_blockhash,
             lamports_per_signature,
             counts,
             &mut result.output.execute_timings,
         );
 
-        self.register_ticks(entries)?;
         Ok(result)
+    }
+
+    pub fn to_sanitized_transaction(
+        &self,
+        tx: VersionedTransaction,
+        verify: bool,
+    ) -> Result<SanitizedTransaction> {
+        let message_hash = if verify {
+            tx.verify_and_hash_message()
+                .map_err(|e| AccountDbError::ConvertTxError(e.to_string()))?
+        } else {
+            tx.message.hash()
+        };
+        SanitizedTransaction::try_create(
+            tx,
+            message_hash,
+            None,
+            self.bank.as_ref(),
+            self.bank.get_reserved_account_keys(),
+        )
+        .map_err(|e| AccountDbError::ConvertTxError(e.to_string()).into())
     }
 
     fn register_ticks(&self, entries: &[Entry]) -> Result<()> {
         let fork = self.bank_forks.read().unwrap();
         let bank_with_schedule = fork.working_bank_with_scheduler();
 
-        // Skip the first tick because it's the entry that contains transactions
-        entries.iter().skip(1).for_each(|entry| {
+        entries.iter().filter(|e| e.is_tick()).for_each(|entry| {
             bank_with_schedule.register_tick(&entry.hash);
         });
 
@@ -149,15 +187,40 @@ impl RollupStorage {
 
     fn collect_execution_logs(
         &mut self,
-        _sanitized_output: &LoadAndExecuteSanitizedTransactionsOutput,
-        _sanitized_txs: &[SanitizedTransaction],
+        sanitized_output: &LoadAndExecuteSanitizedTransactionsOutput,
+        sanitized_txs: &[SanitizedTransaction],
     ) -> ExecutedTransactionCounts {
-        // TODO: implement me
+        let mut signature_count: u64 = 0;
+        let mut executed_transactions_count: u64 = 0;
+        let mut executed_non_vote_transactions_count: u64 = 0;
+        let mut executed_with_failure_result_count: u64 = 0;
+        for (execution_result, tx) in sanitized_output
+            .execution_results
+            .iter()
+            .zip(sanitized_txs.as_ref())
+        {
+            if execution_result.was_executed() {
+                // Signature count must be accumulated only if the transaction
+                // is executed, otherwise a mismatched count between banking and
+                // replay could occur
+                signature_count += u64::from(tx.message().header().num_required_signatures);
+                executed_transactions_count += 1;
+
+                if !tx.is_simple_vote_transaction() {
+                    executed_non_vote_transactions_count += 1;
+                }
+            }
+
+            if execution_result.flattened_result().is_err() {
+                executed_with_failure_result_count += 1;
+            }
+        }
+
         ExecutedTransactionCounts {
-            executed_transactions_count: 0,
-            executed_non_vote_transactions_count: 0,
-            executed_with_failure_result_count: 0,
-            signature_count: 0,
+            executed_transactions_count,
+            executed_non_vote_transactions_count,
+            executed_with_failure_result_count,
+            signature_count,
         }
     }
 

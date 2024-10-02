@@ -3,7 +3,12 @@ use crate::{
     Result, RollupStorage,
 };
 use solana_runtime::{bank_forks::BankForks, installed_scheduler_pool::BankWithScheduler};
-use solana_sdk::{account::ReadableAccount, hash::Hash, pubkey::Pubkey};
+use solana_sdk::{
+    account::{AccountSharedData, ReadableAccount},
+    clock::Slot,
+    hash::Hash,
+    pubkey::Pubkey,
+};
 use std::{
     collections::HashSet,
     sync::{Arc, RwLock},
@@ -29,7 +34,11 @@ pub struct SlotInfo {
 impl RollupStorage {
     pub fn get_slot_info(&self, slot: u64) -> Result<SlotInfo> {
         let head = self.get_slot_head(slot)?;
-        let parent = self.get_slot_head(head.slot - 1)?;
+        let parent = if head.slot > 0 {
+            self.get_slot_head(head.slot - 1)?
+        } else {
+            Default::default()
+        };
         let store_height = self.blockstore.highest_slot()?;
         Ok(SlotInfo {
             head,
@@ -80,7 +89,27 @@ impl RollupStorage {
             .unwrap_or(0)
     }
 
-    pub fn reorg(&mut self, slot: u64, finalized: Option<u64>) -> Result<Vec<BankWithScheduler>> {
+    pub fn has_account(&self, pubkey: &Pubkey) -> bool {
+        self.bank.get_account(pubkey).is_some()
+    }
+
+    pub fn get_account(&self, pubkey: &Pubkey) -> Result<AccountSharedData> {
+        self.bank
+            .get_account(pubkey)
+            .ok_or(StorageError::AccountNotFound.into())
+    }
+
+    pub fn get_account_by_slot(&self, slot: Slot, pubkey: &Pubkey) -> Result<AccountSharedData> {
+        self.bank_forks
+            .read()
+            .unwrap()
+            .get(slot)
+            .ok_or(BankError::BankNotExists(slot))?
+            .get_account(pubkey)
+            .ok_or(StorageError::AccountNotFound.into())
+    }
+
+    pub fn reorg(&mut self, slot: Slot, finalized: Option<u64>) -> Result<Vec<BankWithScheduler>> {
         let removed = self.set_root(slot, finalized)?;
         let ancestors = find_ancestors(slot, finalized, self.bank_forks.clone(), &removed);
 

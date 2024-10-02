@@ -1,10 +1,8 @@
-use igloo_executor::processor::bank::BankProcessor;
-use igloo_executor::processor::Processor;
-use igloo_interface::l2::bank::BankOperations;
+use igloo_executor::processor::TransactionProcessor;
 use igloo_storage::blockstore::txs::CommitBatch;
 use igloo_storage::execution::TransactionsResultWrapper;
 use igloo_storage::{config::GlobalConfig, RollupStorage};
-use igloo_validator::settings::{Settings, Switchs};
+use igloo_verifier::settings::{Settings, Switchs};
 use solana_program::hash::Hash;
 use solana_sdk::account::AccountSharedData;
 use solana_sdk::transaction::SanitizedTransaction;
@@ -13,6 +11,7 @@ use solana_sdk::{
 };
 use std::borrow::Cow;
 use std::error::Error;
+use std::vec;
 
 // Number of accounts and transactions to create
 const NUM_ACCOUNTS: usize = 1;
@@ -86,7 +85,7 @@ fn main() -> Result<(), E> {
             )
         })
         .collect::<Result<Vec<_>, _>>()?;
-    let bank_processor = BankProcessor::new(
+    let bank_processor = TransactionProcessor::new(
         store.current_bank(),
         Settings {
             max_age: Default::default(),
@@ -94,15 +93,16 @@ fn main() -> Result<(), E> {
                 tx_sanity_check: false,
                 txs_conflict_check: true,
             },
+            fee_structure: Default::default(),
         },
     );
 
     let execute_result = bank_processor.process(Cow::Borrowed(&transfer_txs))?;
     let result = store.commit_block(
-        TransactionsResultWrapper {
+        vec![TransactionsResultWrapper {
             output: execute_result,
-        },
-        &CommitBatch::new(transfer_txs.into()),
+        }],
+        vec![CommitBatch::new(transfer_txs.into())],
     )?;
 
     // Print final balances

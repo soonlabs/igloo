@@ -1,7 +1,7 @@
-use igloo_interface::l2::{
-    bank::{BankInfo, BankOperations},
-    executor::Init,
-    storage::StorageOperations,
+use crate::{
+    background::StorageBackground, blockstore::txs::CommitBatch, config::GlobalConfig,
+    error::BankError, execution::TransactionsResultWrapper, history::StorageHistoryServices,
+    BankInfo, Error, Result,
 };
 use solana_gossip::cluster_info::ClusterInfo;
 use solana_ledger::{
@@ -9,21 +9,9 @@ use solana_ledger::{
     leader_schedule_cache::LeaderScheduleCache,
 };
 use solana_runtime::{bank::Bank, bank_forks::BankForks};
-use solana_sdk::{
-    account::{AccountSharedData, WritableAccount},
-    account_utils::StateMut,
-    bpf_loader_upgradeable::{self, UpgradeableLoaderState},
-    clock::Slot,
-    pubkey::Pubkey,
-    signer::Signer,
-};
+use solana_sdk::{account::AccountSharedData, clock::Slot, pubkey::Pubkey, signer::Signer};
 use solana_svm::transaction_processing_callback::TransactionProcessingCallback;
 use std::sync::{atomic::AtomicBool, Arc, RwLock};
-
-use crate::{
-    background::StorageBackground, blockstore::txs::CommitBatch, config::GlobalConfig,
-    error::BankError, execution::TransactionsResultWrapper, history::StorageHistoryServices, Error,
-};
 
 pub struct RollupStorage {
     pub(crate) bank: Arc<Bank>,
@@ -37,18 +25,6 @@ pub struct RollupStorage {
     pub(crate) leader_schedule_cache: Arc<LeaderScheduleCache>,
     pub(crate) process_options: ProcessOptions,
     pub(crate) exit: Arc<AtomicBool>,
-}
-
-impl Init for RollupStorage {
-    type Error = crate::Error;
-    type Config = GlobalConfig;
-
-    fn init(cfg: &Self::Config) -> Result<Self, Self::Error>
-    where
-        Self: Sized,
-    {
-        Self::new(cfg.clone())
-    }
 }
 
 impl TransactionProcessingCallback for RollupStorage {
@@ -72,73 +48,6 @@ impl TransactionProcessingCallback for RollupStorage {
     }
 }
 
-impl BankOperations for RollupStorage {
-    type Pubkey = Pubkey;
-
-    type AccountSharedData = AccountSharedData;
-
-    type Error = Error;
-
-    fn insert_account(
-        &mut self,
-        key: Self::Pubkey,
-        data: Self::AccountSharedData,
-    ) -> Result<(), Self::Error> {
-        if self.config.dev_mode {
-            self.bank.store_account(&key, &data);
-            Ok(())
-        } else {
-            Err(BankError::InvalidOperation("Capitalization check not passed".to_string()).into())
-        }
-    }
-
-    fn deploy_program(&mut self, buffer: Vec<u8>) -> Result<Self::Pubkey, Self::Error> {
-        let program_key = solana_sdk::pubkey::new_rand();
-        let programdata_key = solana_sdk::pubkey::new_rand();
-
-        let mut program_account = AccountSharedData::new_data(
-            40,
-            &UpgradeableLoaderState::Program {
-                programdata_address: programdata_key,
-            },
-            &bpf_loader_upgradeable::id(),
-        )
-        .unwrap();
-        program_account.set_executable(true);
-        program_account.set_rent_epoch(1);
-        let programdata_data_offset = UpgradeableLoaderState::size_of_programdata_metadata();
-        let mut programdata_account = AccountSharedData::new(
-            40,
-            programdata_data_offset + buffer.len(),
-            &bpf_loader_upgradeable::id(),
-        );
-        programdata_account
-            .set_state(&UpgradeableLoaderState::ProgramData {
-                slot: self.bank.parent_slot(),
-                upgrade_authority_address: None,
-            })
-            .unwrap();
-        programdata_account.data_as_mut_slice()[programdata_data_offset..].copy_from_slice(&buffer);
-        programdata_account.set_rent_epoch(1);
-        self.bank.store_account(&program_key, &program_account);
-        self.bank
-            .store_account(&programdata_key, &programdata_account);
-
-        Ok(program_key)
-    }
-
-    fn set_clock(&mut self) -> Result<(), Self::Error> {
-        // We do nothing here because there is a clock sysvar in the bank already
-        Ok(())
-    }
-
-    fn bump(&mut self) -> Result<(), Self::Error> {
-        let slot = self.bank_forks.read().unwrap().highest_slot();
-        self.bump_slot(slot + 1)?;
-        Ok(())
-    }
-}
-
 impl BankInfo for RollupStorage {
     type Hash = solana_sdk::hash::Hash;
 
@@ -148,15 +57,24 @@ impl BankInfo for RollupStorage {
 
     type Error = Error;
 
-    fn last_blockhash(&self) -> Self::Hash {
-        self.bank.last_blockhash()
+    fn last_blockhash(&self, slot: Option<Slot>) -> std::result::Result<Self::Hash, Self::Error> {
+        Ok(if let Some(slot) = slot {
+            self.bank_forks
+                .read()
+                .unwrap()
+                .get(slot)
+                .ok_or(BankError::BankNotExists(slot))?
+                .last_blockhash()
+        } else {
+            self.bank.last_blockhash()
+        })
     }
 
     fn execution_slot(&self) -> Self::Slot {
         self.bank.slot()
     }
 
-    fn collector_id(&self) -> Result<Self::Pubkey, Self::Error> {
+    fn collector_id(&self) -> std::result::Result<Self::Pubkey, Self::Error> {
         Ok(self
             .config
             .keypairs
@@ -167,41 +85,6 @@ impl BankInfo for RollupStorage {
     }
 }
 
-impl StorageOperations for RollupStorage {
-    type Error = Error;
-    type TxsResult = TransactionsResultWrapper;
-    type TransactionSet<'a> = CommitBatch<'a>;
-
-    async fn commit<'a>(
-        &mut self,
-        result: Self::TxsResult,
-        origin: Self::TransactionSet<'a>,
-    ) -> Result<(), Self::Error> {
-        // TODO: make commit async
-
-        if self.enable_history() {
-            self.commit_with_history(result, origin)?;
-        } else {
-            self.commit_block(result, &origin)?;
-        }
-        Ok(())
-    }
-
-    async fn force_save(&mut self) -> Result<(), Self::Error> {
-        self.bank.freeze();
-        self.set_root(self.bank.slot(), None)?;
-        Ok(())
-    }
-
-    async fn close(self) -> Result<(), Self::Error> {
-        self.try_wait_snapshot_complete().await;
-        self.exit.store(true, std::sync::atomic::Ordering::Relaxed);
-        self.blockstore.drop_signal();
-        self.join();
-        Ok(())
-    }
-}
-
 impl RollupStorage {
     pub(crate) fn join(self) {
         drop(self.bank);
@@ -209,7 +92,69 @@ impl RollupStorage {
         self.background_service.join();
     }
 
+    pub fn config(&self) -> &GlobalConfig {
+        &self.config
+    }
+
+    pub fn bank_forks(&self) -> Arc<RwLock<BankForks>> {
+        self.bank_forks.clone()
+    }
+
+    pub fn blockstore(&self) -> Arc<Blockstore> {
+        self.blockstore.clone()
+    }
+
+    pub fn history_services(&self) -> &StorageHistoryServices {
+        &self.history_services
+    }
+
     pub fn cluster_info(&self) -> Arc<ClusterInfo> {
         self.cluster_info.clone()
+    }
+
+    pub async fn commit<'a>(
+        &mut self,
+        result: Vec<TransactionsResultWrapper>,
+        origin: Vec<CommitBatch<'a>>,
+    ) -> Result<()> {
+        self.commit_block(result, origin)?;
+        Ok(())
+    }
+
+    pub async fn force_save(&mut self) -> Result<()> {
+        self.bank.freeze();
+        self.set_root(self.bank.slot(), None)?;
+        Ok(())
+    }
+
+    pub async fn close(self) -> Result<()> {
+        self.try_wait_snapshot_complete().await;
+        self.exit.store(true, std::sync::atomic::Ordering::Relaxed);
+        self.blockstore.drop_signal();
+        self.join();
+        Ok(())
+    }
+
+    pub fn bump(&mut self) -> Result<()> {
+        let slot = self.bank_forks.read().unwrap().highest_slot();
+        self.bump_slot(slot + 1)?;
+        Ok(())
+    }
+
+    pub fn insert_account(&mut self, key: Pubkey, data: AccountSharedData) -> Result<()> {
+        if self.config.dev_mode {
+            self.bank.store_account(&key, &data);
+            Ok(())
+        } else {
+            Err(BankError::InvalidOperation("Capitalization check not passed".to_string()).into())
+        }
+    }
+
+    pub fn get_bank(&self, slot: Slot) -> Result<Arc<Bank>> {
+        self.bank_forks
+            .read()
+            .unwrap()
+            .get(slot)
+            .ok_or(BankError::BankNotExists(slot).into())
     }
 }

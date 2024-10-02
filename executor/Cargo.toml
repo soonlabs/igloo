@@ -8,23 +8,23 @@ license.workspace = true
 edition.workspace = true
 
 [dependencies]
-igloo-interface = { workspace = true }
 igloo-storage = { workspace = true }
-igloo-validator = { workspace = true }
+igloo-verifier = { workspace = true }
 tempfile = { workspace = true }
 
 thiserror = { workspace = true }
 tokio = { workspace = true }
 log = { workspace = true }
 crossbeam-channel = { workspace = true }
+async-trait = { workspace = true }
 
 solana-ledger = { workspace = true }
 solana-accounts-db = { workspace = true }
 solana-sdk = { workspace = true }
 solana-svm = { workspace = true }
-solana-runtime = { workspace = true }
+solana-runtime = { workspace = true, features = ["dev-context-only-utils"] }
 solana-core = { workspace = true }
-solana-program = { workspace = true}
+solana-program = { workspace = true }
 ahash = "0.8.11"
 rand = "0.8.5"
 min-max-heap = "1.3.0"

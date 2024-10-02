@@ -12,7 +12,6 @@ use crate::{
     RollupStorage,
 };
 use anyhow::Result;
-use igloo_interface::l2::{bank::BankOperations, storage::StorageOperations};
 use solana_sdk::{signature::Keypair, signer::Signer, system_transaction};
 
 #[tokio::test]
@@ -76,28 +75,28 @@ async fn conflict_transaction_may_lead_incorrect_state() -> Result<()> {
     assert_result_balance(
         bob,
         Some(INIT_AMOUNT + BOB_PLUS),
-        &results.loaded_transactions[0].as_ref().unwrap(),
+        results.loaded_transactions[0].as_ref().unwrap(),
     );
     assert_result_balance(
         alice,
         Some(INIT_AMOUNT - BOB_PLUS),
-        &results.loaded_transactions[0].as_ref().unwrap(),
+        results.loaded_transactions[0].as_ref().unwrap(),
     );
     // assert second transaction result
     assert_result_balance(
         alice,
         None, // alice balance not changed
-        &results.loaded_transactions[1].as_ref().unwrap(),
+        results.loaded_transactions[1].as_ref().unwrap(),
     );
     assert_result_balance(
         bob,
         Some(INIT_AMOUNT - BOB_MINUS), // TODO: should be INIT_AMOUNT + BOB_PLUS - BOB_MINUS or throw error ?
-        &results.loaded_transactions[1].as_ref().unwrap(),
+        results.loaded_transactions[1].as_ref().unwrap(),
     );
     assert_result_balance(
         charlie,
         Some(INIT_AMOUNT + BOB_MINUS),
-        &results.loaded_transactions[1].as_ref().unwrap(),
+        results.loaded_transactions[1].as_ref().unwrap(),
     );
     // after process balance not changed
     assert_eq!(store.balance(&alice), INIT_AMOUNT);
@@ -108,8 +107,8 @@ async fn conflict_transaction_may_lead_incorrect_state() -> Result<()> {
     let origin_txs = create_svm_transactions(&raw_txs);
     store
         .commit(
-            TransactionsResultWrapper { output: results },
-            CommitBatch::new(origin_txs.clone().into()),
+            vec![TransactionsResultWrapper { output: results }],
+            vec![CommitBatch::new(origin_txs.clone().into())],
         )
         .await?;
 
@@ -155,8 +154,8 @@ async fn conflict_transaction_execute_with_bank() -> Result<()> {
     let bank = store.bank.clone();
 
     let raw_txs = vec![
-        system_transaction::transfer(&alice, &bob.pubkey(), TO_BOB, bank.last_blockhash()),
-        system_transaction::transfer(&alice, &charlie.pubkey(), TO_CHARLIE, bank.last_blockhash()),
+        system_transaction::transfer(alice, &bob.pubkey(), TO_BOB, bank.last_blockhash()),
+        system_transaction::transfer(alice, &charlie.pubkey(), TO_CHARLIE, bank.last_blockhash()),
     ];
     let results = bank.process_transactions(raw_txs.iter());
     assert_eq!(results[0], Ok(()));
@@ -201,8 +200,8 @@ async fn conflict_transaction_execute_with_bank2() -> Result<()> {
     let bank = store.bank.clone();
 
     let raw_txs = vec![
-        system_transaction::transfer(&alice, &bob.pubkey(), TO_BOB, bank.last_blockhash()),
-        system_transaction::transfer(&bob, &charlie.pubkey(), TO_CHARLIE, bank.last_blockhash()),
+        system_transaction::transfer(alice, &bob.pubkey(), TO_BOB, bank.last_blockhash()),
+        system_transaction::transfer(bob, &charlie.pubkey(), TO_CHARLIE, bank.last_blockhash()),
     ];
     let results = bank.process_transactions(raw_txs.iter());
     assert_eq!(results[0], Ok(()));

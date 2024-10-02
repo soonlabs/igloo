@@ -89,6 +89,7 @@ impl EntriesProcessor {
         Ok((data_shreds, coding_shreds))
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn entries_to_shreds(
         &mut self,
         keypair: &Keypair,
@@ -173,9 +174,9 @@ fn get_chained_merkle_root_from_parent(
     debug_assert!(parent < slot, "parent: {parent} >= slot: {slot}");
     let index = blockstore
         .meta(parent)?
-        .ok_or_else(|| StorageError::UnknownSlotMeta(parent))?
+        .ok_or(StorageError::UnknownSlotMeta(parent))?
         .last_index
-        .ok_or_else(|| StorageError::UnknownLastIndex(parent))?;
+        .ok_or(StorageError::UnknownLastIndex(parent))?;
     let shred = blockstore
         .get_data_shred(parent, index)?
         .ok_or(StorageError::ShredNotFound {

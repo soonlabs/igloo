@@ -16,6 +16,7 @@ crossbeam-channel = { workspace = true }
 rand = { workspace = true }
 assert_matches = { workspace = true }
 
+solana-client = { workspace = true }
 solana-ledger = { workspace = true }
 solana-accounts-db = { workspace = true }
 solana-sdk = { workspace = true }
@@ -28,13 +29,13 @@ solana-measure = { workspace = true }
 solana-gossip = { workspace = true }
 solana-streamer = { workspace = true }
 solana-rpc = { workspace = true }
+solana-send-transaction-service = { workspace = true }
 solana-transaction-status = { workspace = true }
 solana-account-decoder = { workspace = true }
 solana-metrics = { workspace = true }
+solana-connection-cache = { workspace = true }
 spl-token = { workspace = true }
 spl-token-2022 = { workspace = true }
-
-igloo-interface = { workspace = true }
 
 [dev-dependencies]
 anyhow = { workspace = true }
@@ -44,3 +45,4 @@ solana-compute-budget = { workspace = true }
 solana-bpf-loader-program = { workspace = true }
 solana-system-program = { workspace = true }
 solana-program-runtime = { workspace = true }
+tokio = { workspace = true, features = ["full"] }

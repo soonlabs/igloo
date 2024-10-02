@@ -1,5 +1,4 @@
 use anyhow::Result;
-use igloo_interface::l2::{bank::BankOperations, storage::StorageOperations};
 use solana_accounts_db::{
     accounts_db::{self, ACCOUNTS_DB_CONFIG_FOR_TESTING},
     accounts_index::AccountSecondaryIndexes,
@@ -68,15 +67,15 @@ async fn init_from_snapshot_works() -> Result<()> {
     let origin_txs = raw_txs
         .clone()
         .into_iter()
-        .map(|tx| SanitizedTransaction::from_transaction_for_tests(tx))
+        .map(SanitizedTransaction::from_transaction_for_tests)
         .collect::<Vec<_>>();
     let results = process_transfers_ex(&store, origin_txs.clone());
 
     // 2. commit
     store
         .commit(
-            TransactionsResultWrapper { output: results },
-            CommitBatch::new(origin_txs.clone().into()),
+            vec![TransactionsResultWrapper { output: results }],
+            vec![CommitBatch::new(origin_txs.clone().into())],
         )
         .await?;
 

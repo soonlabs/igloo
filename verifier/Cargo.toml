@@ -1,5 +1,5 @@
 [package]
-name = "igloo-validator"
+name = "igloo-verifier"
 version.workspace = true
 authors.workspace = true
 repository.workspace = true
@@ -8,7 +8,6 @@ license.workspace = true
 edition.workspace = true
 
 [dependencies]
-igloo-interface = { workspace = true }
 igloo-storage = { workspace = true }
 tempfile = { workspace = true }
 

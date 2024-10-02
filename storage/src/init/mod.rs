@@ -80,6 +80,7 @@ impl RollupStorage {
 
     pub fn init(&mut self) -> Result<()> {
         self.aligne_blockstore_with_bank_forks()?;
+        self.bank = self.bank_forks.read().unwrap().working_bank();
         Ok(())
     }
 
@@ -126,6 +127,7 @@ pub(crate) fn init_config(ledger_path: &Path) -> Result<StorageConfig> {
     })
 }
 
+#[allow(clippy::type_complexity)]
 fn load_blockstore(
     cfg: &mut GlobalConfig,
     exit: Arc<AtomicBool>,
