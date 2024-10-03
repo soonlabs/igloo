@@ -5,6 +5,7 @@ pub mod read_write_account_set;
 pub mod seq_id_generator;
 pub mod thread_aware_account_locks;
 pub mod transaction_state_container;
+pub mod stopwatch;
 
 /// Represents a scheduled transaction with additional metadata
 ///

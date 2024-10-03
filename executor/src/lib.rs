@@ -19,7 +19,7 @@ pub mod error;
 pub mod processor;
 #[cfg(test)]
 mod tests;
-mod scheduling;
+pub mod scheduling;
 
 pub use error::{Error, Result};
 
