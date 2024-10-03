@@ -1,22 +1,38 @@
 use ahash::{HashMap, HashMapExt};
 
-/// Represents the current status of an SVM worker, including the duration of that status.
+/// Represents the current status of an SVM worker, including its duration.
 #[derive(Debug, Clone)]
 pub enum SvmWorkerSlicingStatus {
-    /// Worker is actively processing a batch of transactions.
-    Active {
-        /// Start time of the active period (Unix timestamp in milliseconds).
-        start: u64,
-        /// End time of the active period (Unix timestamp in milliseconds).
-        end: u64,
-    },
-    /// Worker is idle, waiting for new transactions to process.
-    Idle {
-        /// Start time of the idle period (Unix timestamp in milliseconds).
-        start: u64,
-        /// End time of the idle period (Unix timestamp in milliseconds).
-        end: u64,
-    },
+    /// Worker is actively processing transactions.
+    Active { start: u64, end: u64 },
+    /// Worker is idle, waiting for new transactions.
+    Idle { start: u64, end: u64 },
+}
+
+impl SvmWorkerSlicingStatus {
+    /// Period start time (Unix timestamp in milliseconds).
+    pub fn start(&self) -> u64 {
+        match self {
+            SvmWorkerSlicingStatus::Active { start, .. } | SvmWorkerSlicingStatus::Idle { start, .. } => *start,
+        }
+    }
+
+    /// Period end time (Unix timestamp in milliseconds).
+    pub fn end(&self) -> u64 {
+        match self {
+            SvmWorkerSlicingStatus::Active { end, .. } | SvmWorkerSlicingStatus::Idle { end, .. } => *end,
+        }
+    }
+
+    /// Returns true if the status is Active.
+    pub fn is_active(&self) -> bool {
+        matches!(self, SvmWorkerSlicingStatus::Active { .. })
+    }
+
+    /// Returns true if the status is Idle.
+    pub fn is_idle(&self) -> bool {
+        matches!(self, SvmWorkerSlicingStatus::Idle { .. })
+    }
 }
 
 impl SvmWorkerSlicingStatus {
@@ -103,6 +119,27 @@ pub fn calculate_thread_load_summary(updates: &[WorkerStatusUpdate]) -> ThreadLo
 }
 
 /// Merges overlapping time windows.
+///
+/// This function takes a vector of time windows (start, end) and merges
+/// overlapping or adjacent windows into single, continuous windows.
+///
+/// # Examples:
+///
+/// 1. Non-overlapping windows:
+///    Input:  [(1, 3), (5, 7), (9, 11)]
+///    Output: [(1, 3), (5, 7), (9, 11)]
+///
+/// 2. Overlapping windows:
+///    Input:  [(1, 5), (2, 6), (3, 7)]
+///    Output: [(1, 7)]
+///
+/// 3. Adjacent windows:
+///    Input:  [(1, 3), (3, 5), (7, 9)]
+///    Output: [(1, 5), (7, 9)]
+///
+/// 4. Mixed case:
+///    Input:  [(1, 3), (2, 4), (5, 7), (6, 8), (10, 12)]
+///    Output: [(1, 4), (5, 8), (10, 12)]
 fn merge_time_windows(windows: Vec<(u64, u64)>) -> Vec<(u64, u64)> {
     if windows.is_empty() {
         return vec![];
@@ -113,8 +150,12 @@ fn merge_time_windows(windows: Vec<(u64, u64)>) -> Vec<(u64, u64)> {
     for window in windows.into_iter().skip(1) {
         let last = merged.last_mut().unwrap();
         if window.0 <= last.1 {
+            // If the start of the current window is less than or equal to
+            // the end of the last merged window, we have an overlap or adjacent windows.
+            // Extend the last merged window to cover both.
             last.1 = last.1.max(window.1);
         } else {
+            // If there's no overlap, add the current window as a new entry.
             merged.push(window);
         }
     }

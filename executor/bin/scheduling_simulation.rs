@@ -1,10 +1,18 @@
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use igloo_executor::processor::TransactionProcessor;
-use igloo_executor::scheduling::status_slicing::{calculate_thread_load_summary, SvmWorkerSlicingStatus, WorkerStatusUpdate};
+use igloo_executor::scheduling::prio_graph_scheduler::{CompletedTransaction, PrioGraphScheduler};
+use igloo_executor::scheduling::scheduler_messages::{
+    ConsumeWork, FinishedConsumeWork, TransactionBatchId,
+};
+use igloo_executor::scheduling::seq_id_generator::SeqIdGenerator;
+use igloo_executor::scheduling::status_slicing::{
+    calculate_thread_load_summary, SvmWorkerSlicingStatus, WorkerStatusUpdate,
+};
 use igloo_executor::scheduling::stopwatch::StopWatch;
 use igloo_executor::scheduling::ScheduledTransaction;
 use igloo_storage::{config::GlobalConfig, RollupStorage};
 use igloo_verifier::settings::{Settings, Switchs};
+use itertools::Itertools;
 use solana_program::hash::Hash;
 use solana_sdk::account::AccountSharedData;
 use solana_sdk::transaction::SanitizedTransaction;
@@ -48,6 +56,8 @@ const NUM_ACCOUNTS: usize = TOTAL_TX_NUM * 2;
 const ACCOUNT_BALANCE: u64 = 100_000_000_000;
 // batch size of every svm execution
 const SVM_EXEC_BATCH: usize = 64;
+// batch size of each call of scheduler.
+const SCHEDULER_BATCH_SIZE: usize = 2048;
 
 /// Worker process function that receives ScheduledTransactions and processes them
 ///
@@ -60,18 +70,27 @@ const SVM_EXEC_BATCH: usize = 64;
 /// A Result containing the number of successfully processed transactions, or an error
 fn worker_process(
     thread_id: usize,
+    // TODO Arc.
     receiver: Receiver<Vec<ScheduledTransaction>>,
     store: Arc<RollupStorage>,
     settings: Settings,
     status_sender: Sender<WorkerStatusUpdate>,
+    completed_sender: Sender<FinishedConsumeWork>,
 ) -> Result<usize, E> {
     let bank_processor = TransactionProcessor::new(store.current_bank(), settings);
     let mut success_count = 0;
-    let mut idle_start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
+    let mut idle_start = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis() as u64;
 
     while let Ok(scheduled_txs) = receiver.recv() {
+        println!("worker {} receive", thread_id);
         // Calculate and send idle status before processing
-        let active_start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
+        let active_start = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64;
         let idle_status = SvmWorkerSlicingStatus::new_idle(idle_start, active_start);
         status_sender.send(WorkerStatusUpdate {
             thread_id,
@@ -88,9 +107,25 @@ fn worker_process(
             .filter(|x| x.was_executed_successfully())
             .count();
 
-        let active_end = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
+        let active_end = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64;
         let active_status = SvmWorkerSlicingStatus::new_active(active_start, active_end);
-        status_sender.send(WorkerStatusUpdate { thread_id, status: active_status })?;
+        status_sender.send(WorkerStatusUpdate {
+            thread_id,
+            status: active_status,
+        })?;
+        let finish_work = FinishedConsumeWork {
+            thread_id,
+            work: ConsumeWork {
+                batch_id: TransactionBatchId::new(0),
+                ids: vec![],
+                transactions: sanitized_txs,
+            },
+            retryable_indexes: vec![],
+        };
+        completed_sender.send(finish_work)?;
 
         // Update idle_start for next iteration
         idle_start = active_end;
@@ -108,8 +143,11 @@ fn main() -> Result<(), E> {
         Vec<Receiver<Vec<ScheduledTransaction>>>,
     ) = (0..TOTAL_WORKER_NUM).map(|_| unbounded()).unzip();
 
-    // Status update channel
+    // thread slice_status update channel
     let (status_sender, status_receiver) = unbounded();
+
+    // transaction completed channel
+    let (completed_sender, completed_receiver) = unbounded();
 
     let accounts: Vec<_> = (0..NUM_ACCOUNTS)
         .map(|_| (Keypair::new(), ACCOUNT_BALANCE))
@@ -144,7 +182,7 @@ fn main() -> Result<(), E> {
         .collect::<Result<Vec<_>, _>>()?;
     stopwatch.click("tx generation");
 
-    // Create worker threads
+    // Start worker threads
     let settings = Settings {
         max_age: Default::default(),
         switchs: Switchs {
@@ -153,7 +191,6 @@ fn main() -> Result<(), E> {
         },
         fee_structure: Default::default(),
     };
-
     let worker_handles: Vec<_> = receivers
         .into_iter()
         .enumerate()
@@ -162,32 +199,26 @@ fn main() -> Result<(), E> {
             let settings_clone = settings.clone();
             thread::spawn({
                 let ss = status_sender.clone();
-                move || worker_process(i, receiver, store_clone, settings_clone, ss)
+                let cs = completed_sender.clone();
+                move || worker_process(i, receiver, store_clone, settings_clone, ss, cs)
             })
         })
         .collect();
 
-    // Distribute transactions to workers in batches
-    let mut batch_id: usize = 0;
-    for chunk in transfer_txs.chunks(SVM_EXEC_BATCH) {
-        let scheduled_txs: Vec<ScheduledTransaction> = chunk
-            .iter()
-            .map(|tx| ScheduledTransaction {
-                id: batch_id as u64,
-                priority: 0,
-                transaction: tx.clone(),
-            })
-            .collect();
-        
-        // Round-robin distribution of batches to workers
-        let worker_id = batch_id % TOTAL_WORKER_NUM;
-        senders[worker_id].send(scheduled_txs).unwrap();
-        
-        batch_id += 1;
+    let mut scheduler = PrioGraphScheduler::new(senders.clone(), completed_receiver);
+    for chunk in transfer_txs
+        .into_iter()
+        .chunks(SCHEDULER_BATCH_SIZE)
+        .into_iter()
+        .map(|chunk| chunk.collect())
+        .collect::<Vec<_>>()
+    {
+        scheduler.schedule_batch(chunk);
     }
 
     // Close senders to signal workers to finish
     drop(senders);
+    drop(scheduler);
     drop(status_sender);
 
     // Wait for workers to finish and collect results
@@ -212,7 +243,7 @@ fn main() -> Result<(), E> {
     }
 
     println!("time stat: {}", stopwatch.summary());
-    
+
     // Sort all_status_point by thread_id and then by start time
     all_status_point.sort_by(|a, b| {
         a.thread_id.cmp(&b.thread_id).then_with(|| {
@@ -229,7 +260,10 @@ fn main() -> Result<(), E> {
     });
 
     // Print sorted worker status updates
-    println!("thread load: {:?}", calculate_thread_load_summary(all_status_point.as_slice()));
-    
+    println!(
+        "thread load: {:?}",
+        calculate_thread_load_summary(all_status_point.as_slice())
+    );
+
     Ok(())
 }

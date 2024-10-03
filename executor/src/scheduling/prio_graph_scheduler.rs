@@ -1,11 +1,13 @@
+use crate::scheduling::scheduler_messages::FinishedConsumeWork;
 use crate::scheduling::seq_id_generator::SeqIdGenerator;
 use crate::scheduling::thread_aware_account_locks::{ThreadAwareAccountLocks, ThreadSet};
+use crate::scheduling::ScheduledTransaction;
 use crossbeam_channel::{Receiver, Sender};
+use itertools::Itertools;
 use rand::prelude::IteratorRandom;
 use solana_sdk::transaction::SanitizedTransaction;
-use crate::scheduling::ScheduledTransaction;
 
-// Defines the structure for completed transaction information
+/// Defines the structure for completed transaction information
 pub struct CompletedTransaction {
     pub thread_id: usize,
     pub transaction: SanitizedTransaction,
@@ -24,7 +26,7 @@ pub struct PrioGraphScheduler {
     /// Generator for unique transaction IDs
     id_generator: SeqIdGenerator,
     /// Receiver for completed transaction information
-    completed_receiver: Receiver<CompletedTransaction>,
+    completed_receiver: Receiver<FinishedConsumeWork>,
 }
 
 impl PrioGraphScheduler {
@@ -35,7 +37,7 @@ impl PrioGraphScheduler {
     /// * `completed_receiver` - A receiver for completed transaction information
     pub fn new(
         senders: Vec<Sender<Vec<ScheduledTransaction>>>,
-        completed_receiver: Receiver<CompletedTransaction>,
+        completed_receiver: Receiver<FinishedConsumeWork>,
     ) -> Self {
         let len = senders.len();
         Self {
@@ -71,12 +73,14 @@ impl PrioGraphScheduler {
             })
             .collect();
 
-        for window in scheduled_transactions.chunks(self.window_size) {
-            let before_locks = self.account_locks.get_locked_address();
-            println!("Total locks before processing window: {}", before_locks);
+        for window in scheduled_transactions
+            .into_iter()
+            .chunks(self.window_size)
+            .into_iter()
+            .map(Iterator::collect)
+            .collect::<Vec<_>>()
+        {
             self.process_window(window);
-            let after_locks = self.account_locks.get_locked_address();
-            println!("Total locks after processing window: {}", after_locks);
         }
 
         // Process completed transactions
@@ -91,7 +95,7 @@ impl PrioGraphScheduler {
     /// This method adds transactions to the priority graph, identifies non-conflicting
     /// batches, and sends them to appropriate worker threads.
     /// It also tracks the total number of locks acquired during processing.
-    fn process_window(&mut self, window: &[ScheduledTransaction]) {
+    fn process_window(&mut self, window: Vec<ScheduledTransaction>) {
         let thread_num = self.senders.len();
         let mut schedule_batch = vec![vec![]; thread_num];
         for transaction in window {
@@ -119,7 +123,7 @@ impl PrioGraphScheduler {
                         .unwrap()
                 },
             ) {
-                schedule_batch[thread_id].push(transaction.clone());
+                schedule_batch[thread_id].push(transaction);
             } else {
                 // can't find a thread to schedule, currently just throw it.
             }
@@ -133,29 +137,25 @@ impl PrioGraphScheduler {
     /// Handles completed transactions by unlocking the corresponding accounts
     fn handle_completed_transactions(&mut self) {
         while let Ok(completed) = self.completed_receiver.try_recv() {
-            let message = completed.transaction.message();
-            let account_keys = message.account_keys();
+            for transaction in completed.work.transactions {
+                let message = transaction.message();
+                let account_keys = message.account_keys();
 
-            let write_account_locks = account_keys
-                .iter()
-                .enumerate()
-                .filter_map(|(index, key)| message.is_writable(index).then_some(key));
-            let read_account_locks = account_keys
-                .iter()
-                .enumerate()
-                .filter_map(|(index, key)| (!message.is_writable(index)).then_some(key));
+                let write_account_locks = account_keys
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(index, key)| message.is_writable(index).then_some(key));
+                let read_account_locks = account_keys
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(index, key)| (!message.is_writable(index)).then_some(key));
 
-            self.account_locks.unlock_accounts(
-                write_account_locks,
-                read_account_locks,
-                completed.thread_id,
-            );
-
-            let remaining_locks = self.account_locks.get_locked_address();
-            println!(
-                "Received data from thread {}, remaining locks after unlock: {}",
-                completed.thread_id, remaining_locks
-            );
+                self.account_locks.unlock_accounts(
+                    write_account_locks,
+                    read_account_locks,
+                    completed.thread_id,
+                );
+            }
         }
     }
 

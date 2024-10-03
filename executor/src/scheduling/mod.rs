@@ -7,6 +7,7 @@ pub mod thread_aware_account_locks;
 pub mod transaction_state_container;
 pub mod stopwatch;
 pub mod status_slicing;
+pub mod scheduler_messages;
 
 /// Represents a scheduled transaction with additional metadata
 ///
