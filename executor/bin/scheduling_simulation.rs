@@ -1,6 +1,6 @@
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use igloo_executor::processor::TransactionProcessor;
-use igloo_executor::scheduling::status_slicing::{SvmWorkerSlicingStatus, WorkerStatusUpdate};
+use igloo_executor::scheduling::status_slicing::{calculate_thread_load_summary, SvmWorkerSlicingStatus, WorkerStatusUpdate};
 use igloo_executor::scheduling::stopwatch::StopWatch;
 use igloo_executor::scheduling::ScheduledTransaction;
 use igloo_storage::{config::GlobalConfig, RollupStorage};
@@ -211,7 +211,7 @@ fn main() -> Result<(), E> {
         all_status_point.push(point);
     }
 
-    println!("{}", stopwatch.summary());
+    println!("time stat: {}", stopwatch.summary());
     
     // Sort all_status_point by thread_id and then by start time
     all_status_point.sort_by(|a, b| {
@@ -229,9 +229,7 @@ fn main() -> Result<(), E> {
     });
 
     // Print sorted worker status updates
-    for status in all_status_point {
-        println!("Thread {}: {:?}", status.thread_id, status.status);
-    }
+    println!("thread load: {:?}", calculate_thread_load_summary(all_status_point.as_slice()));
     
     Ok(())
 }
