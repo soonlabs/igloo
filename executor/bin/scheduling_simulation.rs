@@ -1,9 +1,8 @@
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use igloo_executor::processor::TransactionProcessor;
+use igloo_executor::scheduling::status_slicing::{SvmWorkerSlicingStatus, WorkerStatusUpdate};
 use igloo_executor::scheduling::stopwatch::StopWatch;
 use igloo_executor::scheduling::ScheduledTransaction;
-use igloo_storage::blockstore::txs::CommitBatch;
-use igloo_storage::execution::TransactionsResultWrapper;
 use igloo_storage::{config::GlobalConfig, RollupStorage};
 use igloo_verifier::settings::{Settings, Switchs};
 use solana_program::hash::Hash;
@@ -16,8 +15,7 @@ use std::borrow::Cow;
 use std::error::Error;
 use std::sync::Arc;
 use std::thread;
-use std::time::Instant;
-use std::vec;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 type E = Box<dyn Error + Send + Sync>;
 
@@ -42,12 +40,14 @@ fn mocking_transfer_tx(
     ))
 }
 
-const TOTAL_TX_NUM: usize = 1024 * 1;
+const TOTAL_TX_NUM: usize = 1024 * 16;
 const TOTAL_WORKER_NUM: usize = 4;
 // each tx need 2 unique accounts.
 const NUM_ACCOUNTS: usize = TOTAL_TX_NUM * 2;
 // initial account balance: 100 SOL.
 const ACCOUNT_BALANCE: u64 = 100_000_000_000;
+// batch size of every svm execution
+const SVM_EXEC_BATCH: usize = 64;
 
 /// Worker process function that receives ScheduledTransactions and processes them
 ///
@@ -59,14 +59,25 @@ const ACCOUNT_BALANCE: u64 = 100_000_000_000;
 /// # Returns
 /// A Result containing the number of successfully processed transactions, or an error
 fn worker_process(
+    thread_id: usize,
     receiver: Receiver<Vec<ScheduledTransaction>>,
     store: Arc<RollupStorage>,
     settings: Settings,
+    status_sender: Sender<WorkerStatusUpdate>,
 ) -> Result<usize, E> {
     let bank_processor = TransactionProcessor::new(store.current_bank(), settings);
     let mut success_count = 0;
+    let mut idle_start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
 
     while let Ok(scheduled_txs) = receiver.recv() {
+        // Calculate and send idle status before processing
+        let active_start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
+        let idle_status = SvmWorkerSlicingStatus::new_idle(idle_start, active_start);
+        status_sender.send(WorkerStatusUpdate {
+            thread_id,
+            status: idle_status,
+        })?;
+
         let sanitized_txs: Vec<SanitizedTransaction> =
             scheduled_txs.into_iter().map(|st| st.transaction).collect();
 
@@ -76,19 +87,29 @@ fn worker_process(
             .iter()
             .filter(|x| x.was_executed_successfully())
             .count();
+
+        let active_end = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
+        let active_status = SvmWorkerSlicingStatus::new_active(active_start, active_end);
+        status_sender.send(WorkerStatusUpdate { thread_id, status: active_status })?;
+
+        // Update idle_start for next iteration
+        idle_start = active_end;
     }
 
     Ok(success_count)
 }
 
 fn main() -> Result<(), E> {
-    let mut stopwatch = StopWatch::new();
+    let mut stopwatch = StopWatch::new("scheduling_simulation");
 
     // workload channel.
     let (senders, receivers): (
         Vec<Sender<Vec<ScheduledTransaction>>>,
         Vec<Receiver<Vec<ScheduledTransaction>>>,
     ) = (0..TOTAL_WORKER_NUM).map(|_| unbounded()).unzip();
+
+    // Status update channel
+    let (status_sender, status_receiver) = unbounded();
 
     let accounts: Vec<_> = (0..NUM_ACCOUNTS)
         .map(|_| (Keypair::new(), ACCOUNT_BALANCE))
@@ -135,29 +156,39 @@ fn main() -> Result<(), E> {
 
     let worker_handles: Vec<_> = receivers
         .into_iter()
-        .map(|receiver| {
+        .enumerate()
+        .map(|(i, receiver)| {
             let store_clone = Arc::clone(&store);
             let settings_clone = settings.clone();
-            thread::spawn(move || worker_process(receiver, store_clone, settings_clone))
+            thread::spawn({
+                let ss = status_sender.clone();
+                move || worker_process(i, receiver, store_clone, settings_clone, ss)
+            })
         })
         .collect();
 
-    // Distribute transactions to workers
-    let chunk_size = transfer_txs.len() / TOTAL_WORKER_NUM;
-    for (i, chunk) in transfer_txs.chunks(chunk_size).enumerate() {
+    // Distribute transactions to workers in batches
+    let mut batch_id: usize = 0;
+    for chunk in transfer_txs.chunks(SVM_EXEC_BATCH) {
         let scheduled_txs: Vec<ScheduledTransaction> = chunk
             .iter()
             .map(|tx| ScheduledTransaction {
-                id: i as u64,
+                id: batch_id as u64,
                 priority: 0,
                 transaction: tx.clone(),
             })
             .collect();
-        senders[i].send(scheduled_txs).unwrap();
+        
+        // Round-robin distribution of batches to workers
+        let worker_id = batch_id % TOTAL_WORKER_NUM;
+        senders[worker_id].send(scheduled_txs).unwrap();
+        
+        batch_id += 1;
     }
 
     // Close senders to signal workers to finish
     drop(senders);
+    drop(status_sender);
 
     // Wait for workers to finish and collect results
     let total_success_count: usize = worker_handles
@@ -175,7 +206,32 @@ fn main() -> Result<(), E> {
     // )?;
     // let commit_duration = commit_start.elapsed();
     // println!("Block commit time: {:?}", commit_duration);
+    let mut all_status_point = Vec::with_capacity(1024 * 256);
+    while let Ok(point) = status_receiver.recv() {
+        all_status_point.push(point);
+    }
 
     println!("{}", stopwatch.summary());
+    
+    // Sort all_status_point by thread_id and then by start time
+    all_status_point.sort_by(|a, b| {
+        a.thread_id.cmp(&b.thread_id).then_with(|| {
+            let a_start = match &a.status {
+                SvmWorkerSlicingStatus::Active { start, .. } => *start,
+                SvmWorkerSlicingStatus::Idle { start, .. } => *start,
+            };
+            let b_start = match &b.status {
+                SvmWorkerSlicingStatus::Active { start, .. } => *start,
+                SvmWorkerSlicingStatus::Idle { start, .. } => *start,
+            };
+            a_start.cmp(&b_start)
+        })
+    });
+
+    // Print sorted worker status updates
+    for status in all_status_point {
+        println!("Thread {}: {:?}", status.thread_id, status.status);
+    }
+    
     Ok(())
 }
