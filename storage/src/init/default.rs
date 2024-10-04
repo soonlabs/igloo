@@ -4,6 +4,8 @@ use solana_ledger::{
     genesis_utils::GenesisConfigInfo,
 };
 use solana_runtime::genesis_utils::create_genesis_config_with_leader_ex;
+use solana_sdk::account::AccountSharedData;
+use solana_sdk::pubkey::Pubkey;
 use solana_sdk::{
     fee_calculator::FeeRateGovernor,
     genesis_config::{ClusterType, GenesisConfig},
@@ -17,7 +19,10 @@ pub const DEFAULT_VALIDATOR_LAMPORTS: u64 = 10_000_000;
 pub const DEFAULT_MINT_LAMPORTS: u64 = 1_000_000_000;
 pub const DEFAULT_STAKE_LAMPORTS: u64 = 50_000_000;
 
-pub(crate) fn default_genesis_config(ledger_path: &Path) -> Result<(GenesisConfigInfo, Keypair)> {
+pub(crate) fn default_genesis_config(
+    ledger_path: &Path,
+    init_accounts: Vec<(Pubkey, AccountSharedData)>,
+) -> Result<(GenesisConfigInfo, Keypair)> {
     let validator_key = Keypair::new();
     let mint_keypair = Keypair::new();
     let voting_keypair = Keypair::new();
@@ -32,7 +37,7 @@ pub(crate) fn default_genesis_config(ledger_path: &Path) -> Result<(GenesisConfi
         FeeRateGovernor::new(0, 0), // most tests can't handle transaction fees
         Rent::free(),               // most tests don't expect rent
         ClusterType::Development,
-        vec![],
+        init_accounts,
     );
     init_block_store(ledger_path, &genesis_config)?;
 

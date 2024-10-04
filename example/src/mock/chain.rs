@@ -69,4 +69,20 @@ impl MockLayer1 {
             calldata: vec![],
         }
     }
+
+    // Generate a mocked transfer transaction from one account to another
+    fn mocking_transfer_tx() -> DepositTx {
+        let from_kp = Keypair::new();
+        let to_kp = Keypair::new();
+        
+        // Generate a random amount between 1 and 1000
+        let amount = rand::random::<u64>() % 1000 + 1;
+        
+        DepositTx {
+            from: from_kp.pubkey(),
+            to: to_kp.pubkey(),
+            amount,
+            calldata: vec![], // Empty calldata for a simple transfer
+        }
+    }
 }

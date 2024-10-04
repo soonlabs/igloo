@@ -1,0 +1,49 @@
+use {solana_sdk::transaction::SanitizedTransaction, std::fmt::Display};
+
+/// A unique identifier for a transaction batch.
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
+pub struct TransactionBatchId(u64);
+
+impl TransactionBatchId {
+    pub fn new(index: u64) -> Self {
+        Self(index)
+    }
+}
+
+impl Display for TransactionBatchId {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+/// A unique identifier for a transaction.
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct TransactionId(u64);
+
+impl TransactionId {
+    pub fn new(index: u64) -> Self {
+        Self(index)
+    }
+}
+
+impl Display for TransactionId {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+/// Message: [Scheduler -> Worker]
+/// Transactions to be consumed (i.e. executed, recorded, and committed)
+pub struct ConsumeWork {
+    pub batch_id: TransactionBatchId,
+    pub ids: Vec<TransactionId>,
+    pub transactions: Vec<SanitizedTransaction>,
+}
+
+/// Message: [Worker -> Scheduler]
+/// Processed transactions.
+pub struct FinishedConsumeWork {
+    pub thread_id: usize,
+    pub work: ConsumeWork,
+    pub retryable_indexes: Vec<usize>,
+}

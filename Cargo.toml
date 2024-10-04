@@ -40,6 +40,7 @@ assert_matches = "1.5.0"
 
 solana-bpf-loader-program = { version = "=2.0.7" }
 solana-compute-budget = { version = "=2.0.7" }
+solana-program = { version = "=2.0.7" }
 solana-program-runtime = { version = "=2.0.7" }
 solana-sdk = { version = "=2.0.7" }
 solana-svm = { version = "=2.0.7" }
