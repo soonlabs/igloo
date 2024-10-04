@@ -1,10 +1,9 @@
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use igloo_executor::processor::TransactionProcessor;
-use igloo_executor::scheduling::prio_graph_scheduler::{CompletedTransaction, PrioGraphScheduler};
+use igloo_executor::scheduling::prio_graph_scheduler::PrioGraphScheduler;
 use igloo_executor::scheduling::scheduler_messages::{
     ConsumeWork, FinishedConsumeWork, TransactionBatchId,
 };
-use igloo_executor::scheduling::seq_id_generator::SeqIdGenerator;
 use igloo_executor::scheduling::status_slicing::{
     calculate_thread_load_summary, SvmWorkerSlicingStatus, WorkerStatusUpdate,
 };
@@ -14,8 +13,9 @@ use igloo_storage::{config::GlobalConfig, RollupStorage};
 use igloo_verifier::settings::{Settings, Switchs};
 use itertools::Itertools;
 use solana_program::hash::Hash;
+use solana_program::instruction::{AccountMeta, Instruction};
 use solana_sdk::account::AccountSharedData;
-use solana_sdk::transaction::SanitizedTransaction;
+use solana_sdk::transaction::{SanitizedTransaction, Transaction};
 use solana_sdk::{
     pubkey::Pubkey, signature::Keypair, signer::Signer, system_program, system_transaction,
 };
@@ -54,8 +54,6 @@ const TOTAL_WORKER_NUM: usize = 4;
 const NUM_ACCOUNTS: usize = TOTAL_TX_NUM * 2;
 // initial account balance: 100 SOL.
 const ACCOUNT_BALANCE: u64 = 100_000_000_000;
-// batch size of every svm execution
-const SVM_EXEC_BATCH: usize = 64;
 // batch size of each call of scheduler.
 const SCHEDULER_BATCH_SIZE: usize = 2048;
 
@@ -85,7 +83,6 @@ fn worker_process(
         .as_millis() as u64;
 
     while let Ok(scheduled_txs) = receiver.recv() {
-        println!("worker {} receive", thread_id);
         // Calculate and send idle status before processing
         let active_start = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -112,10 +109,12 @@ fn worker_process(
             .unwrap()
             .as_millis() as u64;
         let active_status = SvmWorkerSlicingStatus::new_active(active_start, active_end);
-        status_sender.send(WorkerStatusUpdate {
+        if let Err(e) = status_sender.send(WorkerStatusUpdate {
             thread_id,
             status: active_status,
-        })?;
+        }) {
+            eprintln!("send status error: {:?}", e);
+        }
         let finish_work = FinishedConsumeWork {
             thread_id,
             work: ConsumeWork {
@@ -125,7 +124,12 @@ fn worker_process(
             },
             retryable_indexes: vec![],
         };
-        completed_sender.send(finish_work)?;
+
+        // it's ok to ignore send error.
+        // because error is handled by the scheduler.
+        // if scheduler exits, means all task is scheduled.
+        // no need to maintain lock now.
+        let _ = completed_sender.send(finish_work);
 
         // Update idle_start for next iteration
         idle_start = active_end;

@@ -87,6 +87,7 @@ pub fn calculate_thread_load_summary(updates: &[WorkerStatusUpdate]) -> ThreadLo
     // Sort and merge overlapping time windows
     time_windows.sort_by_key(|&(start, _)| start);
     let merged_windows = merge_time_windows(time_windows);
+    summary.merged_windows = merged_windows.len() as u64;
 
     let total_threads = thread_statuses.len() as f64;
 
@@ -159,7 +160,6 @@ fn merge_time_windows(windows: Vec<(u64, u64)>) -> Vec<(u64, u64)> {
             merged.push(window);
         }
     }
-
     merged
 }
 
@@ -172,12 +172,15 @@ pub struct ThreadLoadSummary {
     pub weighted_load: f64,
     /// The average load across all time windows.
     pub average_load: f64,
+    /// total merged windows
+    pub merged_windows: u64,
 }
 
 impl ThreadLoadSummary {
     /// Prints a human-readable summary of the thread load and coverage.
     pub fn print_summary(&self) {
         println!("Thread Load Summary:");
+        println!("Total Merged Windows: {}", self.merged_windows);
         println!("Total Duration: {} ms", self.total_duration);
         println!("Average Load: {:.2}%", self.average_load * 100.0);
         println!("Overall Thread Coverage: {:.2}%", self.average_load * 100.0);
