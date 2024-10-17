@@ -1301,6 +1301,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "dashmap"
+version = "6.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5041cc499144891f3790297212f32a74fb938e5136a14943f338ef9e0ae276cf"
+dependencies = [
+ "cfg-if 1.0.0",
+ "crossbeam-utils",
+ "hashbrown 0.14.5",
+ "lock_api",
+ "once_cell",
+ "parking_lot_core 0.9.10",
+]
+
+[[package]]
 name = "data-encoding"
 version = "2.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2309,6 +2323,64 @@ dependencies = [
  "bincode",
  "thiserror",
  "tokio",
+]
+
+[[package]]
+name = "igloo-rpc"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64 0.22.1",
+ "bincode",
+ "bs58",
+ "crossbeam-channel",
+ "dashmap 6.1.0",
+ "futures 0.3.31",
+ "igloo-storage",
+ "itertools 0.13.0",
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "jsonrpc-http-server",
+ "jsonrpc-pubsub",
+ "libc",
+ "log",
+ "rayon",
+ "regex",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "soketto 0.8.0",
+ "solana-account-decoder",
+ "solana-accounts-db",
+ "solana-client",
+ "solana-core",
+ "solana-entry",
+ "solana-faucet",
+ "solana-inline-spl",
+ "solana-ledger",
+ "solana-measure",
+ "solana-metrics",
+ "solana-perf",
+ "solana-program",
+ "solana-rayon-threadlimit",
+ "solana-rpc",
+ "solana-rpc-client-api",
+ "solana-runtime",
+ "solana-sdk",
+ "solana-stake-program",
+ "solana-storage-bigtable",
+ "solana-streamer",
+ "solana-transaction-status",
+ "solana-version",
+ "spl-pod",
+ "spl-token",
+ "spl-token-2022",
+ "stream-cancel",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tokio-util 0.7.12",
 ]
 
 [[package]]
@@ -4527,6 +4599,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "soketto"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "37468c595637c10857701c990f93a40ce0e357cedb0953d1c26c8d8027f9bb53"
+dependencies = [
+ "base64 0.22.1",
+ "bytes",
+ "futures 0.3.31",
+ "httparse",
+ "log",
+ "rand 0.8.5",
+ "sha1",
+]
+
+[[package]]
 name = "solana-account-decoder"
 version = "2.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4564,7 +4651,7 @@ dependencies = [
  "bytemuck_derive",
  "bzip2",
  "crossbeam-channel",
- "dashmap",
+ "dashmap 5.5.3",
  "index_list",
  "indexmap 2.6.0",
  "itertools 0.12.1",
@@ -4713,7 +4800,7 @@ checksum = "67169e4f1faabb717ce81b5ca93960da21e3ac5c9b75cb6792f9b3ce38db459f"
 dependencies = [
  "async-trait",
  "bincode",
- "dashmap",
+ "dashmap 5.5.3",
  "futures 0.3.31",
  "futures-util",
  "indexmap 2.6.0",
@@ -4806,7 +4893,7 @@ dependencies = [
  "bytes",
  "chrono",
  "crossbeam-channel",
- "dashmap",
+ "dashmap 5.5.3",
  "etcd-client",
  "futures 0.3.31",
  "histogram",
@@ -5052,7 +5139,7 @@ dependencies = [
  "chrono",
  "chrono-humanize",
  "crossbeam-channel",
- "dashmap",
+ "dashmap 5.5.3",
  "eager",
  "fs_extra",
  "futures 0.3.31",
@@ -5449,7 +5536,7 @@ dependencies = [
  "bincode",
  "bs58",
  "crossbeam-channel",
- "dashmap",
+ "dashmap 5.5.3",
  "itertools 0.12.1",
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -5463,7 +5550,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
- "soketto",
+ "soketto 0.7.1",
  "solana-account-decoder",
  "solana-accounts-db",
  "solana-client",
@@ -5578,7 +5665,7 @@ dependencies = [
  "byteorder",
  "bzip2",
  "crossbeam-channel",
- "dashmap",
+ "dashmap 5.5.3",
  "dir-diff",
  "flate2",
  "fnv",
@@ -5830,7 +5917,7 @@ dependencies = [
  "async-channel",
  "bytes",
  "crossbeam-channel",
- "dashmap",
+ "dashmap 5.5.3",
  "futures-util",
  "histogram",
  "indexmap 2.6.0",
@@ -6059,7 +6146,7 @@ checksum = "2d8896936ebbc23cc495e7688c878f01f985b78c795cdaca51752ecb9b1ea330"
 dependencies = [
  "assert_matches",
  "crossbeam-channel",
- "dashmap",
+ "dashmap 5.5.3",
  "derivative",
  "log",
  "qualifier_attr",
@@ -6327,9 +6414,9 @@ dependencies = [
 
 [[package]]
 name = "spl-pod"
-version = "0.3.1"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c704c88fc457fa649ba3aabe195c79d885c3f26709efaddc453c8de352c90b87"
+checksum = "e6166a591d93af33afd75bbd8573c5fd95fb1213f1bf254f0508c89fdb5ee156"
 dependencies = [
  "borsh 1.5.1",
  "bytemuck",
