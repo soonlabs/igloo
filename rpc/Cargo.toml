@@ -1,0 +1,64 @@
+[package]
+name = "igloo-rpc"
+version.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[dependencies]
+bs58 = { workspace = true }
+libc = { workspace = true }
+regex = { workspace = true }
+serde_derive = { workspace = true }
+stream-cancel = { workspace = true }
+solana-account-decoder = { workspace = true }
+solana-accounts-db = { workspace = true }
+solana-core = { workspace = true }
+solana-entry = { workspace = true }
+solana-faucet = { workspace = true }
+solana-inline-spl = { workspace = true }
+solana-metrics = { workspace = true }
+solana-perf = { workspace = true }
+solana-runtime = { workspace = true, features = ["dev-context-only-utils"] }
+solana-ledger = { workspace = true }
+solana-sdk = { workspace = true }
+solana-storage-bigtable = { workspace = true }
+solana-streamer = { workspace = true }
+solana-transaction-status = { workspace = true }
+solana-rpc-client-api = { workspace = true }
+solana-version = { workspace = true }
+solana-program = { workspace = true }
+solana-measure = { workspace = true }
+solana-rayon-threadlimit = { workspace = true }
+solana-stake-program = { workspace = true }
+igloo-storage = { workspace = true }
+soketto = { workspace = true }
+spl-token = { workspace = true }
+spl-token-2022 = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
+tokio-util = { workspace = true, features = ["codec", "compat"] }
+thiserror = { workspace = true }
+jsonrpc-http-server = { workspace = true }
+jsonrpc-core = { workspace = true }
+jsonrpc-core-client = { workspace = true }
+jsonrpc-derive = { workspace = true }
+jsonrpc-pubsub = { workspace = true }
+log = { workspace = true }
+base64 = { workspace = true }
+bincode = { workspace = true }
+crossbeam-channel = { workspace = true }
+futures = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+tempfile = { workspace = true }
+itertools = { workspace = true }
+rayon = { workspace = true }
+dashmap = { workspace = true }
+
+[dev-dependencies]
+solana-rpc = { workspace = true }
+solana-client = { workspace = true }
+spl-pod = { workspace = true }

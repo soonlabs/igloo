@@ -22,3 +22,5 @@ target/
 *.swp
 
 bak/*
+
+rpc/farf
