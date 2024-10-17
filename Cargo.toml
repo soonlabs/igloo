@@ -12,6 +12,7 @@ members = [
 	"svm/cli",
 	"svm/executor",
 	"verifier",
+	"rpc",
 ]
 resolver = "2"
 
@@ -37,6 +38,26 @@ rand = "0.8.5"
 crossbeam-channel = "0.5.13"
 tempfile = "3.3.0"
 assert_matches = "1.5.0"
+async-trait = "0.1.80"
+bs58 = "0.5.1"
+base64 = "0.22.1"
+dashmap = "6.1.0"
+futures = "0.3.31"
+itertools = "0.13.0"
+jsonrpc-core = "18.0.0"
+jsonrpc-core-client = "18.0.0"
+jsonrpc-http-server = "18.0.0"
+jsonrpc-derive = "18.0.0"
+jsonrpc-pubsub = "18.0.0"
+libc = "0.2.159"
+rayon = "1.10.0"
+regex = "1.11.0"
+serde = "1.0.210"
+serde_derive = "1.0.210"
+serde_json = "1.0.128"
+soketto = "0.8.0"
+stream-cancel = "0.8.2"
+tokio-util = "0.7.12"
 
 solana-bpf-loader-program = { version = "=2.0.7" }
 solana-compute-budget = { version = "=2.0.7" }
@@ -62,13 +83,22 @@ solana-metrics = { version = "=2.0.7" }
 solana-client = { version = "=2.0.7" }
 solana-connection-cache = { version = "=2.0.7" }
 solana-send-transaction-service = { version = "=2.0.7" }
+solana-faucet = { version = "=2.0.7" }
+solana-inline-spl = { version = "=2.0.7" }
+solana-perf = { version = "=2.0.7" }
+solana-program = { version = "=2.0.7" }
+solana-rayon-threadlimit = { version = "=2.0.7" }
+solana-rpc-client-api = { version = "=2.0.7" }
+solana-storage-bigtable = { version = "=2.0.7" }
+solana-version = { version = "=2.0.7" }
 spl-token = "=6.0.0"
 spl-token-2022 = "=4.0.0"
-async-trait = "0.1.80"
+spl-pod = "=0.3.0"
 
 igloo-interface = { path = "interface" }
 igloo-storage = { path = "storage" }
 igloo-verifier = { path = "verifier" }
+igloo-rpc = { path = "rpc" }
 svm-executor = { path = "svm/executor" }
 
 [patch.crates-io]
