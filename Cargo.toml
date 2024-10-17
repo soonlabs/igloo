@@ -12,6 +12,7 @@ members = [
 	"svm/cli",
 	"svm/executor",
 	"verifier",
+	"prio-graph-scheduler"
 ]
 resolver = "2"
 
@@ -24,6 +25,7 @@ license = "Apache-2.0"
 edition = "2021"
 
 [workspace.dependencies]
+# public crate
 thiserror = "1.0.56"
 bincode = "1.3.3"
 env_logger = "0.11.0"
@@ -37,39 +39,55 @@ rand = "0.8.5"
 crossbeam-channel = "0.5.13"
 tempfile = "3.3.0"
 assert_matches = "1.5.0"
+async-trait = "0.1.80"
+ahash = "0.8.11"
+arrayvec = "0.7.6"
+itertools = "0.13.0"
+min-max-heap = "1.3.0"
+prio-graph = "0.2.1"
 
-solana-bpf-loader-program = { version = "=2.0.7" }
-solana-compute-budget = { version = "=2.0.7" }
-solana-program-runtime = { version = "=2.0.7" }
-solana-sdk = { version = "=2.0.7" }
-solana-svm = { version = "=2.0.7" }
-solana-system-program = { version = "=2.0.7" }
-solana-logger = { version = "=2.0.7" }
-solana-test-validator = { version = "=2.0.7" }
-solana-ledger = { version = "=2.0.7" }
-solana-runtime = { version = "=2.0.7" }
-solana-entry = { version = "=2.0.7" }
-solana-accounts-db = { version = "=2.0.7" }
-solana-core = { version = "=2.0.7" }
-solana-stake-program = { version = "=2.0.7" }
-solana-measure = { version = "=2.0.7" }
-solana-gossip = { version = "=2.0.7" }
-solana-streamer = { version = "=2.0.7" }
-solana-rpc = { version = "=2.0.7" }
-solana-transaction-status = { version = "=2.0.7" }
-solana-account-decoder = { version = "=2.0.7" }
-solana-metrics = { version = "=2.0.7" }
-solana-client = { version = "=2.0.7" }
-solana-connection-cache = { version = "=2.0.7" }
-solana-send-transaction-service = { version = "=2.0.7" }
+# solana crate
+solana-bpf-loader-program = "2.0.13"
+solana-compute-budget = "2.0.13"
+solana-program = "2.0.13"
+solana-program-runtime = "2.0.13"
+solana-sdk = "2.0.13"
+solana-svm = "2.0.13"
+solana-system-program = "2.0.13"
+solana-logger = "2.0.13"
+solana-test-validator = "2.0.13"
+solana-ledger = "2.0.13"
+solana-runtime = "2.0.13"
+solana-entry = "2.0.13"
+solana-accounts-db = "2.0.13"
+solana-core = "2.0.13"
+solana-stake-program = "2.0.13"
+solana-measure = "2.0.13"
+solana-gossip = "2.0.13"
+solana-streamer = "2.0.13"
+solana-rpc = "2.0.13"
+solana-transaction-status = "2.0.13"
+solana-account-decoder = "2.0.13"
+solana-metrics = "2.0.13"
+solana-client = "2.0.13"
+solana-connection-cache = "2.0.13"
+solana-send-transaction-service = "2.0.13"
+solana-cost-model = "2.0.13"
+solana-poh = "2.0.13"
+solana-perf = "2.0.13"
+solana-runtime-transaction = "2.0.13"
+## some crate not in 2.0.X
+solana-sanitize = { git = "https://github.com/anza-xyz/agave.git", rev = "47c439a28b7dbd25feef1e6d8a019a2c0c0fc821" }
+solana-short-vec = { git = "https://github.com/anza-xyz/agave.git", rev = "47c439a28b7dbd25feef1e6d8a019a2c0c0fc821" }
 spl-token = "=6.0.0"
 spl-token-2022 = "=4.0.0"
-async-trait = "0.1.80"
 
+# member crate
 igloo-interface = { path = "interface" }
 igloo-storage = { path = "storage" }
 igloo-verifier = { path = "verifier" }
 svm-executor = { path = "svm/executor" }
+solana-prio-graph-scheduler = { path = "prio-graph-scheduler" }
 
 [patch.crates-io]
 #crossbeam-epoch = { git = "https://github.com/anza-xyz/crossbeam", rev = "fd279d707025f0e60951e429bf778b4813d1b6bf" } // Patch `crossbeam-epoch v0.9.5 was not used in the crate graph
