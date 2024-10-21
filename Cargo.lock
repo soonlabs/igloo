@@ -2299,15 +2299,21 @@ checksum = "9007da9cacbd3e6343da136e98b0d2df013f553d35bdec8b518f07bea768e19c"
 name = "igloo-executor"
 version = "0.1.0"
 dependencies = [
+ "ahash 0.8.11",
  "anyhow",
  "async-trait",
  "crossbeam-channel",
  "igloo-storage",
  "igloo-verifier",
+ "itertools 0.13.0",
  "log",
+ "min-max-heap",
+ "rand 0.8.5",
  "solana-accounts-db",
  "solana-core",
  "solana-ledger",
+ "solana-prio-graph-scheduler",
+ "solana-program",
  "solana-runtime",
  "solana-sdk",
  "solana-svm",

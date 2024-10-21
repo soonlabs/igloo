@@ -14,7 +14,7 @@ pub struct TransactionsResultWrapper {
 }
 
 impl RollupStorage {
-    pub(crate) fn commit_block(
+    pub fn commit_block(
         &mut self,
         result: Vec<TransactionsResultWrapper>,
         origin: Vec<CommitBatch>,

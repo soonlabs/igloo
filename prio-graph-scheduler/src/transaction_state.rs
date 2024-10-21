@@ -36,14 +36,12 @@ pub enum TransactionState<P: DeserializableTxPacket> {
         packet: Arc<P>,
         priority: u64,
         cost: u64,
-        should_forward: bool,
     },
     /// The transaction is currently scheduled or being processed.
     Pending {
         packet: Arc<P>,
         priority: u64,
         cost: u64,
-        should_forward: bool,
     },
     /// Only used during transition.
     Transitioning,
@@ -57,14 +55,11 @@ impl<P: DeserializableTxPacket> TransactionState<P> {
         priority: u64,
         cost: u64,
     ) -> Self {
-        let should_forward = !packet.original_packet().meta().forwarded()
-            && packet.original_packet().meta().is_from_staked_node();
         Self::Unprocessed {
             transaction_ttl,
             packet,
             priority,
             cost,
-            should_forward,
         }
     }
 
@@ -84,31 +79,6 @@ impl<P: DeserializableTxPacket> TransactionState<P> {
         match self {
             Self::Unprocessed { cost, .. } => *cost,
             Self::Pending { cost, .. } => *cost,
-            Self::Transitioning => unreachable!(),
-        }
-    }
-
-    /// Return whether packet should be attempted to be forwarded.
-    pub fn should_forward(&self) -> bool {
-        match self {
-            Self::Unprocessed {
-                should_forward: forwarded,
-                ..
-            } => *forwarded,
-            Self::Pending {
-                should_forward: forwarded,
-                ..
-            } => *forwarded,
-            Self::Transitioning => unreachable!(),
-        }
-    }
-
-    /// Mark the packet as forwarded.
-    /// This is used to prevent the packet from being forwarded multiple times.
-    pub fn mark_forwarded(&mut self) {
-        match self {
-            Self::Unprocessed { should_forward, .. } => *should_forward = false,
-            Self::Pending { should_forward, .. } => *should_forward = false,
             Self::Transitioning => unreachable!(),
         }
     }
@@ -136,13 +106,11 @@ impl<P: DeserializableTxPacket> TransactionState<P> {
                 packet,
                 priority,
                 cost,
-                should_forward: forwarded,
             } => {
                 *self = TransactionState::Pending {
                     packet,
                     priority,
                     cost,
-                    should_forward: forwarded,
                 };
                 transaction_ttl
             }
@@ -166,14 +134,12 @@ impl<P: DeserializableTxPacket> TransactionState<P> {
                 packet,
                 priority,
                 cost,
-                should_forward: forwarded,
             } => {
                 *self = Self::Unprocessed {
                     transaction_ttl,
                     packet,
                     priority,
                     cost,
-                    should_forward: forwarded,
                 }
             }
             Self::Transitioning => unreachable!(),
