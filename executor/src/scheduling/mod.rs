@@ -1,13 +1,14 @@
-use solana_sdk::transaction::SanitizedTransaction;
+use solana_prio_graph_scheduler::deserializable_packet::DeserializableTxPacket;
+use solana_program::hash::Hash;
+use solana_sdk::transaction::{SanitizedTransaction, SanitizedVersionedTransaction};
+use std::cmp::Ordering;
+use solana_sdk::packet::Packet;
 
-pub mod prio_graph_scheduler;
-pub mod read_write_account_set;
-pub mod seq_id_generator;
-pub mod thread_aware_account_locks;
-pub mod transaction_state_container;
-pub mod stopwatch;
+
+mod scheduler;
 pub mod status_slicing;
-pub mod scheduler_messages;
+pub mod stopwatch;
+mod lazy_channel_wrapper;
 
 /// Represents a scheduled transaction with additional metadata
 ///
@@ -20,5 +21,38 @@ pub struct ScheduledTransaction {
     /// The priority of this transaction in the scheduling queue
     pub priority: u64,
     /// The actual transaction data
-    pub transaction: SanitizedTransaction,
+    pub transaction: SanitizedVersionedTransaction,
+}
+
+impl PartialEq for ScheduledTransaction {
+    fn eq(&self, other: &Self) -> bool {
+        self.id.eq(&other.id)
+    }
+}
+
+impl PartialOrd for ScheduledTransaction {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.id.partial_cmp(&other.id)
+    }
+}
+
+impl Eq for ScheduledTransaction {}
+
+impl DeserializableTxPacket for ScheduledTransaction {
+    type DeserializeError = ();
+
+    fn new(packet: Packet) -> Result<Self, Self::DeserializeError> {
+        todo!()
+    }
+    fn transaction(&self) -> &SanitizedVersionedTransaction {
+        &self.transaction
+    }
+
+    fn message_hash(&self) -> &Hash {
+        todo!()
+    }
+
+    fn is_simple_vote(&self) -> bool {
+        todo!()
+    }
 }

@@ -1,21 +1,19 @@
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use igloo_executor::processor::TransactionProcessor;
-use igloo_executor::scheduling::prio_graph_scheduler::PrioGraphScheduler;
-use igloo_executor::scheduling::scheduler_messages::{
-    ConsumeWork, FinishedConsumeWork, TransactionBatchId,
-};
 use igloo_executor::scheduling::status_slicing::{
     calculate_thread_load_summary, SvmWorkerSlicingStatus, WorkerStatusUpdate,
 };
 use igloo_executor::scheduling::stopwatch::StopWatch;
-use igloo_executor::scheduling::ScheduledTransaction;
 use igloo_storage::{config::GlobalConfig, RollupStorage};
 use igloo_verifier::settings::{Settings, Switchs};
 use itertools::Itertools;
+use solana_prio_graph_scheduler::prio_graph_scheduler::PrioGraphScheduler;
+use solana_prio_graph_scheduler::scheduler_messages::{
+    ConsumeWork, FinishedConsumeWork, TransactionBatchId,
+};
 use solana_program::hash::Hash;
-use solana_program::instruction::{AccountMeta, Instruction};
 use solana_sdk::account::AccountSharedData;
-use solana_sdk::transaction::{SanitizedTransaction, Transaction};
+use solana_sdk::transaction::{SanitizedTransaction, SanitizedVersionedTransaction, VersionedTransaction};
 use solana_sdk::{
     pubkey::Pubkey, signature::Keypair, signer::Signer, system_program, system_transaction,
 };
@@ -41,11 +39,12 @@ fn mocking_transfer_tx(
     to: &Pubkey,
     amount: u64,
     recent_blockhash: Hash,
-) -> Result<SanitizedTransaction, E> {
+) -> Result<SanitizedVersionedTransaction, E> {
     let transaction = system_transaction::transfer(from, to, amount, recent_blockhash);
-    Ok(SanitizedTransaction::from_transaction_for_tests(
-        transaction,
-    ))
+    let versioned_transaction = VersionedTransaction::from(transaction);
+    Ok(SanitizedVersionedTransaction::try_new(
+        versioned_transaction,
+    )?)
 }
 
 const TOTAL_TX_NUM: usize = 1024 * 16;
@@ -68,8 +67,7 @@ const SCHEDULER_BATCH_SIZE: usize = 2048;
 /// A Result containing the number of successfully processed transactions, or an error
 fn worker_process(
     thread_id: usize,
-    // TODO Arc.
-    receiver: Receiver<Vec<ScheduledTransaction>>,
+    receiver: Receiver<ConsumeWork>,
     store: Arc<RollupStorage>,
     settings: Settings,
     status_sender: Sender<WorkerStatusUpdate>,
@@ -94,8 +92,7 @@ fn worker_process(
             status: idle_status,
         })?;
 
-        let sanitized_txs: Vec<SanitizedTransaction> =
-            scheduled_txs.into_iter().map(|st| st.transaction).collect();
+        let sanitized_txs: Vec<SanitizedTransaction> = scheduled_txs.transactions;
 
         let execute_result = bank_processor.process(Cow::Borrowed(&sanitized_txs))?;
         success_count += execute_result
@@ -116,11 +113,11 @@ fn worker_process(
             eprintln!("send status error: {:?}", e);
         }
         let finish_work = FinishedConsumeWork {
-            thread_id,
             work: ConsumeWork {
                 batch_id: TransactionBatchId::new(0),
                 ids: vec![],
                 transactions: sanitized_txs,
+                max_ages: vec![],
             },
             retryable_indexes: vec![],
         };
@@ -142,10 +139,8 @@ fn main() -> Result<(), E> {
     let mut stopwatch = StopWatch::new("scheduling_simulation");
 
     // workload channel.
-    let (senders, receivers): (
-        Vec<Sender<Vec<ScheduledTransaction>>>,
-        Vec<Receiver<Vec<ScheduledTransaction>>>,
-    ) = (0..TOTAL_WORKER_NUM).map(|_| unbounded()).unzip();
+    let (senders, receivers): (Vec<Sender<ConsumeWork>>, Vec<Receiver<ConsumeWork>>) =
+        (0..TOTAL_WORKER_NUM).map(|_| unbounded()).unzip();
 
     // thread slice_status update channel
     let (status_sender, status_receiver) = unbounded();

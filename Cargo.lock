@@ -2312,6 +2312,7 @@ dependencies = [
  "solana-accounts-db",
  "solana-core",
  "solana-ledger",
+ "solana-prio-graph-scheduler",
  "solana-program",
  "solana-runtime",
  "solana-sdk",

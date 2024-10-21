@@ -10,6 +10,7 @@ edition.workspace = true
 [dependencies]
 igloo-storage = { workspace = true }
 igloo-verifier = { workspace = true }
+solana-prio-graph-scheduler = { workspace = true }
 tempfile = { workspace = true }
 
 thiserror = { workspace = true }

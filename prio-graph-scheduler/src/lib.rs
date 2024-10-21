@@ -34,9 +34,7 @@ mod tests {
             message::Message,
             sanitize::SanitizeError,
             signature::Signature,
-            transaction::{
-                SanitizedVersionedTransaction, VersionedTransaction,
-            },
+            transaction::{SanitizedVersionedTransaction, VersionedTransaction},
         },
         solana_short_vec::decode_shortu16_len,
         std::{cmp::Ordering, mem::size_of},
@@ -58,7 +56,6 @@ mod tests {
 
     #[derive(Debug, Eq)]
     pub struct MockImmutableDeserializedPacket {
-        pub original_packet: Packet,
         pub transaction: SanitizedVersionedTransaction,
         pub message_hash: Hash,
         pub is_simple_vote: bool,
@@ -75,15 +72,10 @@ mod tests {
             let is_simple_vote = packet.meta().is_simple_vote_tx();
 
             Ok(Self {
-                original_packet: packet,
                 transaction: sanitized_transaction,
                 message_hash,
                 is_simple_vote,
             })
-        }
-
-        fn original_packet(&self) -> &Packet {
-            &self.original_packet
         }
 
         fn transaction(&self) -> &SanitizedVersionedTransaction {
