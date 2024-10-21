@@ -2384,6 +2384,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "igloo-scheduler"
+version = "0.1.0"
+
+[[package]]
 name = "igloo-storage"
 version = "0.1.0"
 dependencies = [
