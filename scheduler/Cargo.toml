@@ -33,10 +33,6 @@ solana-perf = { workspace = true }
 solana-runtime-transaction = { workspace = true }
 solana-sanitize = { workspace = true }
 solana-short-vec = { workspace = true }
-# let dev-context-only-utils works when running this crate.
-solana-prio-graph-scheduler = { path = ".", features = [
-    "dev-context-only-utils",
-] }
 solana-sdk = { workspace = true, features = ["dev-context-only-utils"] }
 
 bincode = { workspace = true }
