@@ -2384,6 +2384,40 @@ dependencies = [
 ]
 
 [[package]]
+name = "igloo-scheduler"
+version = "0.1.0"
+dependencies = [
+ "ahash 0.8.11",
+ "arrayvec",
+ "assert_matches",
+ "bincode",
+ "crossbeam-channel",
+ "igloo-executor",
+ "igloo-storage",
+ "igloo-verifier",
+ "itertools 0.13.0",
+ "log",
+ "min-max-heap",
+ "prio-graph",
+ "solana-compute-budget",
+ "solana-cost-model",
+ "solana-gossip",
+ "solana-ledger",
+ "solana-measure",
+ "solana-metrics",
+ "solana-perf",
+ "solana-poh",
+ "solana-program",
+ "solana-runtime",
+ "solana-runtime-transaction",
+ "solana-sanitize",
+ "solana-sdk",
+ "solana-short-vec",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
 name = "igloo-storage"
 version = "0.1.0"
 dependencies = [

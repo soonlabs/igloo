@@ -146,7 +146,10 @@ impl<P: DeserializableTxPacket> TransactionStateContainer<P> {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::tests::MockImmutableDeserializedPacket, solana_sdk::{
+        super::*,
+        crate::scheduler_messages::MaxAge,
+        crate::tests::MockImmutableDeserializedPacket,
+        solana_sdk::{
             compute_budget::ComputeBudgetInstruction,
             hash::Hash,
             message::Message,
@@ -157,7 +160,6 @@ mod tests {
             system_instruction,
             transaction::{SanitizedTransaction, Transaction},
         },
-        crate::scheduler_messages::MaxAge,
     };
 
     /// Returns (transaction_ttl, priority, cost)

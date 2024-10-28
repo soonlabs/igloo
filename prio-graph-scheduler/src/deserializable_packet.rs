@@ -1,7 +1,6 @@
-
 use solana_sdk::hash::Hash;
 use solana_sdk::packet::Packet;
-use solana_sdk::transaction::{SanitizedVersionedTransaction};
+use solana_sdk::transaction::SanitizedVersionedTransaction;
 use std::error::Error;
 
 /// DeserializablePacket can be deserialized from a Packet.

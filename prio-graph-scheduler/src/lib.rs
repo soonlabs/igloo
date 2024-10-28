@@ -34,9 +34,7 @@ mod tests {
             message::Message,
             sanitize::SanitizeError,
             signature::Signature,
-            transaction::{
-                SanitizedVersionedTransaction, VersionedTransaction,
-            },
+            transaction::{SanitizedVersionedTransaction, VersionedTransaction},
         },
         solana_short_vec::decode_shortu16_len,
         std::{cmp::Ordering, mem::size_of},
