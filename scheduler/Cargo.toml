@@ -16,6 +16,7 @@ solana-runtime = { workspace = true }
 solana-gossip = { workspace = true }
 solana-cost-model = { workspace = true }
 solana-measure = { workspace = true }
+solana-program = { workspace = true }
 
 ahash = { workspace = true }
 prio-graph = { workspace = true }
@@ -25,6 +26,11 @@ log = { workspace = true }
 crossbeam-channel = { workspace = true }
 arrayvec = { workspace = true }
 min-max-heap = { workspace = true }
+tempfile = { workspace = true }
+
+igloo-executor = { workspace = true }
+igloo-storage = { workspace = true }
+igloo-verifier = { workspace = true }
 
 [dev-dependencies]
 assert_matches = { workspace = true }
@@ -43,3 +49,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 [features]
 dev-context-only-utils = ["solana-runtime/dev-context-only-utils"]
 
+
+[[bin]]
+name = "scheduling-simulation"
+path = "bin/scheduling_simulation.rs"

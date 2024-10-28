@@ -1,6 +1,5 @@
 use crate::scheduler_messages::{SchedulingBatch, SchedulingBatchResult};
-use crossbeam_channel::Receiver;
-use std::sync::mpsc::Sender;
+use crossbeam_channel::{Receiver, Sender};
 
 /// A Scheduler is a single-thread centralized scheduling thread.
 ///
@@ -14,8 +13,8 @@ use std::sync::mpsc::Sender;
 ///             -> Task channelN -> [workerN] -> Task finish callback ->
 pub trait Scheduler {
     fn new(
-        schedule_task_receivers: Vec<Sender<SchedulingBatch>>,
-        task_finish_receiver: Receiver<SchedulingBatchResult>,
+        schedule_task_senders: Vec<Sender<SchedulingBatch>>,
+        task_finished_receivers: Receiver<SchedulingBatchResult>,
     ) -> Self;
 
     fn schedule_batch(&mut self, txs: SchedulingBatch);

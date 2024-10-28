@@ -2392,6 +2392,9 @@ dependencies = [
  "assert_matches",
  "bincode",
  "crossbeam-channel",
+ "igloo-executor",
+ "igloo-storage",
+ "igloo-verifier",
  "itertools 0.13.0",
  "log",
  "min-max-heap",
@@ -2404,11 +2407,13 @@ dependencies = [
  "solana-metrics",
  "solana-perf",
  "solana-poh",
+ "solana-program",
  "solana-runtime",
  "solana-runtime-transaction",
  "solana-sanitize",
  "solana-sdk",
  "solana-short-vec",
+ "tempfile",
  "thiserror",
 ]
 

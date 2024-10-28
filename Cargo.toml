@@ -113,6 +113,7 @@ spl-pod = "=0.3.0"
 igloo-interface = { path = "interface" }
 igloo-storage = { path = "storage" }
 igloo-verifier = { path = "verifier" }
+igloo-executor = { path = "executor" }
 igloo-rpc = { path = "rpc" }
 svm-executor = { path = "svm/executor" }
 solana-prio-graph-scheduler = { path = "prio-graph-scheduler" }
