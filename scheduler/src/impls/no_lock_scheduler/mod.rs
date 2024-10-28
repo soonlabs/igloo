@@ -35,4 +35,6 @@ impl Scheduler for NoLockScheduler {
                 self.task_senders[worker_id].send(batch).unwrap();
             });
     }
+
+    fn receive_complete(&mut self, receipt: SchedulingBatchResult) {}
 }

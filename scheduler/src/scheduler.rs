@@ -18,4 +18,6 @@ pub trait Scheduler {
     ) -> Self;
 
     fn schedule_batch(&mut self, txs: SchedulingBatch);
+
+    fn receive_complete(&mut self, receipt: SchedulingBatchResult);
 }
