@@ -1,3 +1,4 @@
+use solana_program::clock::Slot;
 use {solana_sdk::transaction::SanitizedTransaction, std::fmt::Display};
 
 /// A unique identifier for a transaction batch.
@@ -68,4 +69,12 @@ pub struct SchedulingBatchResult {
     pub batch: SchedulingBatch,
     // time slice status for this batch job.
     pub retryable_indexes: Vec<usize>,
+}
+
+
+/// A TTL flag for a transaction.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct MaxAge {
+    pub epoch_invalidation_slot: Slot,
+    pub alt_invalidation_slot: Slot,
 }
