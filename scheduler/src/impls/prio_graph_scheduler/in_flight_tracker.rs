@@ -1,6 +1,7 @@
 use {
-    crate::id_generator::IdGenerator, crate::scheduler_messages::TransactionBatchId,
-    crate::thread_aware_account_locks::ThreadId, std::collections::HashMap,
+    crate::id_generator::IdGenerator,
+    crate::impls::prio_graph_scheduler::thread_aware_account_locks::ThreadId,
+    crate::scheduler_messages::TransactionBatchId, std::collections::HashMap,
 };
 
 /// Tracks the number of transactions that are in flight for each thread.
@@ -46,7 +47,7 @@ impl InFlightTracker {
         total_cus: u64,
         thread_id: ThreadId,
     ) -> TransactionBatchId {
-        let batch_id = self.batch_id_generator.next();
+        let batch_id = self.batch_id_generator.gen();
         self.num_in_flight_per_thread[thread_id] += num_transactions;
         self.cus_in_flight_per_thread[thread_id] += total_cus;
         self.batches.insert(

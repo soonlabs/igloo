@@ -11,7 +11,7 @@ impl Default for IdGenerator {
 }
 
 impl IdGenerator {
-    pub fn next<T: From<u64>>(&mut self) -> T {
+    pub fn gen<T: From<u64>>(&mut self) -> T {
         let id = self.next_id;
         self.next_id = self.next_id.wrapping_sub(1);
         T::from(id)

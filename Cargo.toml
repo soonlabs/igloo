@@ -12,7 +12,6 @@ members = [
 	"svm/cli",
 	"svm/executor",
 	"verifier",
-	"prio-graph-scheduler",
 	"rpc",
 	"scheduler",
 ]

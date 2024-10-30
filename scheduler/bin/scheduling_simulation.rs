@@ -1,11 +1,9 @@
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use igloo_executor::processor::TransactionProcessor;
 use igloo_scheduler::id_generator::IdGenerator;
-use igloo_scheduler::impls::no_lock_scheduler::NoLockScheduler;
+use igloo_scheduler::impls::prio_graph_scheduler::PrioGraphSchedulerWrapper;
 use igloo_scheduler::scheduler::Scheduler;
-use igloo_scheduler::scheduler_messages::{
-    SchedulingBatch, SchedulingBatchResult,
-};
+use igloo_scheduler::scheduler_messages::{MaxAge, SchedulingBatch, SchedulingBatchResult};
 use igloo_scheduler::status_slicing::{
     calculate_thread_load_summary, SvmWorkerSlicingStatus, WorkerStatusUpdate,
 };
@@ -48,7 +46,7 @@ fn mocking_transfer_tx(
     ))
 }
 
-const TOTAL_TX_NUM: usize = 1024 * 16;
+const TOTAL_TX_NUM: usize = 1024 * 4;
 const TOTAL_WORKER_NUM: usize = 4;
 // each tx need 2 unique accounts.
 const NUM_ACCOUNTS: usize = TOTAL_TX_NUM * 2;
@@ -121,7 +119,7 @@ fn worker_process(
         // it's ok to ignore send error.
         // because error is handled by the scheduler.
         // if scheduler exits, means all task is scheduled.
-        // no need to maintain lock now.
+        // no need to maintain channel now.
         let _ = completed_sender.send(result);
 
         // Update idle_start for next iteration
@@ -170,8 +168,7 @@ fn main() -> Result<(), E> {
     let recent_hash = store.current_bank().last_blockhash();
     let transfer_txs = accounts
         .chunks(2)
-        .enumerate()
-        .map(|(_, chunk)| {
+        .map(|chunk| {
             mocking_transfer_tx(&chunk[0].0, &chunk[1].0.pubkey(), 1e9 as u64, recent_hash)
         })
         .collect::<Result<Vec<_>, _>>()?;
@@ -203,26 +200,29 @@ fn main() -> Result<(), E> {
     let mut batch_id_gen = IdGenerator::default();
     let mut tx_id_gen = IdGenerator::default();
 
-    let mut scheduler = NoLockScheduler::new(senders.clone(), completed_receiver);
+    let mut scheduler = PrioGraphSchedulerWrapper::new(senders.clone(), completed_receiver);
     for chunk in transfer_txs
         .into_iter()
         .chunks(SCHEDULER_BATCH_SIZE)
         .into_iter()
         .map(|chunk| chunk.collect())
         .map(|transactions: Vec<_>| {
+            let len = transactions.len();
             let ids = transactions
                 .iter()
-                .map(|_| tx_id_gen.next())
+                .map(|_| tx_id_gen.gen())
                 .collect::<Vec<_>>();
             SchedulingBatch {
-                batch_id: batch_id_gen.next(),
+                batch_id: batch_id_gen.gen(),
                 ids,
                 transactions,
+                max_ages: vec![MaxAge::default(); len],
             }
         })
         .collect::<Vec<SchedulingBatch>>()
     {
-        scheduler.schedule_batch(chunk);
+        scheduler.schedule_batch(chunk)?;
+        scheduler.receive_complete()?;
     }
 
     // Close senders to signal workers to finish
