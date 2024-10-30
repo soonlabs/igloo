@@ -144,7 +144,7 @@ mod tests {
             bank,
             bank.get_reserved_account_keys(),
         )
-            .unwrap()
+        .unwrap()
     }
 
     fn create_test_address_lookup_table(

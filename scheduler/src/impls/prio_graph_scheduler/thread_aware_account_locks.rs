@@ -154,9 +154,9 @@ impl ThreadAwareAccountLocks {
         match self.locks.get(account) {
             None => ThreadSet::any(self.num_threads),
             Some(AccountLocks {
-                     write_locks: None,
-                     read_locks: Some(read_locks),
-                 }) => {
+                write_locks: None,
+                read_locks: Some(read_locks),
+            }) => {
                 if WRITE {
                     read_locks
                         .thread_set
@@ -168,13 +168,13 @@ impl ThreadAwareAccountLocks {
                 }
             }
             Some(AccountLocks {
-                     write_locks: Some(write_locks),
-                     read_locks: None,
-                 }) => ThreadSet::only(write_locks.thread_id),
+                write_locks: Some(write_locks),
+                read_locks: None,
+            }) => ThreadSet::only(write_locks.thread_id),
             Some(AccountLocks {
-                     write_locks: Some(write_locks),
-                     read_locks: Some(read_locks),
-                 }) => {
+                write_locks: Some(write_locks),
+                read_locks: Some(read_locks),
+            }) => {
                 assert_eq!(
                     read_locks.thread_set.only_one_contained(),
                     Some(write_locks.thread_id)
@@ -182,9 +182,9 @@ impl ThreadAwareAccountLocks {
                 read_locks.thread_set
             }
             Some(AccountLocks {
-                     write_locks: None,
-                     read_locks: None,
-                 }) => unreachable!(),
+                write_locks: None,
+                read_locks: None,
+            }) => unreachable!(),
         }
     }
 

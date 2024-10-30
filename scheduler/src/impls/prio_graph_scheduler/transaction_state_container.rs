@@ -6,7 +6,7 @@ use {
     crate::scheduler_messages::TransactionId,
     itertools::MinMaxResult,
     min_max_heap::MinMaxHeap,
-    std::{collections::HashMap, sync::Arc},
+    std::collections::HashMap,
 };
 
 /// This structure will hold `TransactionState` for the entirety of a
@@ -45,6 +45,10 @@ impl TransactionStateContainer {
             priority_queue: MinMaxHeap::with_capacity(capacity),
             id_to_transaction_state: HashMap::with_capacity(capacity),
         }
+    }
+
+    pub fn len(&self) -> usize {
+        self.priority_queue.len()
     }
 
     /// Returns true if the queue is empty.
@@ -160,13 +164,7 @@ mod tests {
     };
 
     /// Returns (transaction_ttl, priority, cost)
-    fn test_transaction(
-        priority: u64,
-    ) -> (
-        SanitizedTransactionTTL,
-        u64,
-        u64,
-    ) {
+    fn test_transaction(priority: u64) -> (SanitizedTransactionTTL, u64, u64) {
         let from_keypair = Keypair::new();
         let ixs = vec![
             system_instruction::transfer(
@@ -193,10 +191,7 @@ mod tests {
         (transaction_ttl, priority, TEST_TRANSACTION_COST)
     }
 
-    fn push_to_container(
-        container: &mut TransactionStateContainer,
-        num: usize,
-    ) {
+    fn push_to_container(container: &mut TransactionStateContainer, num: usize) {
         for id in 0..num as u64 {
             let priority = id;
             let (transaction_ttl, priority, cost) = test_transaction(priority);

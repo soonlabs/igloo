@@ -1,5 +1,5 @@
 use crate::scheduler_messages::MaxAge;
-use {solana_sdk::transaction::SanitizedTransaction, std::sync::Arc};
+use solana_sdk::transaction::SanitizedTransaction;
 
 /// Simple wrapper type to tie a sanitized transaction to max age slot.
 #[derive(Clone, Debug)]
@@ -114,11 +114,7 @@ impl TransactionState {
     pub fn transition_to_unprocessed(&mut self, transaction_ttl: SanitizedTransactionTTL) {
         match self.take() {
             TransactionState::Unprocessed { .. } => panic!("already unprocessed"),
-            TransactionState::Pending {
-                transaction_ttl,
-                priority,
-                cost,
-            } => {
+            TransactionState::Pending { priority, cost, .. } => {
                 *self = Self::Unprocessed {
                     transaction_ttl,
                     priority,

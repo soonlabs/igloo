@@ -58,6 +58,13 @@ pub struct SchedulingBatch {
     pub batch_id: TransactionBatchId,
     pub ids: Vec<TransactionId>,
     pub transactions: Vec<SanitizedTransaction>,
+    pub max_ages: Vec<MaxAge>,
+}
+
+impl SchedulingBatch {
+    pub fn valid(&self) -> bool {
+        self.transactions.len() == self.ids.len() && self.ids.len() == self.max_ages.len()
+    }
 }
 
 /// The scheduling result from worker one time.
@@ -71,9 +78,8 @@ pub struct SchedulingBatchResult {
     pub retryable_indexes: Vec<usize>,
 }
 
-
 /// A TTL flag for a transaction.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Default)]
 pub struct MaxAge {
     pub epoch_invalidation_slot: Slot,
     pub alt_invalidation_slot: Slot,

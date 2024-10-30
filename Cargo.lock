@@ -5376,36 +5376,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "solana-prio-graph-scheduler"
-version = "0.1.0"
-dependencies = [
- "ahash 0.8.11",
- "arrayvec",
- "assert_matches",
- "bincode",
- "crossbeam-channel",
- "itertools 0.13.0",
- "log",
- "min-max-heap",
- "prio-graph",
- "solana-compute-budget",
- "solana-cost-model",
- "solana-gossip",
- "solana-ledger",
- "solana-measure",
- "solana-metrics",
- "solana-perf",
- "solana-poh",
- "solana-prio-graph-scheduler",
- "solana-runtime",
- "solana-runtime-transaction",
- "solana-sanitize",
- "solana-sdk",
- "solana-short-vec",
- "thiserror",
-]
-
-[[package]]
 name = "solana-program"
 version = "2.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
