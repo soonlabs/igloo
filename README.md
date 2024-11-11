@@ -18,7 +18,7 @@ Please note this is a demonstration and educational project, please do not use i
 
 ## Quick start
 
-We have implement a simple example based on all definitions mentioned above, to run the example you can use the following command at the root folder:
+We have implemented a simple example based on all definitions mentioned above, to run the example you can use the following command at the root folder:
 
 ```bash
 RUST_LOG=example=info cargo run -p example
@@ -26,7 +26,7 @@ RUST_LOG=example=info cargo run -p example
 
 or you can use `RUST_LOG=example=trace cargo run -p example`  to see more details.
 
-There is also a simple SVM Cli program in `svm/cli` folder, you can use the following command to call a custom program:
+There is also a simple SVM CLI program in `svm/cli` folder, you can use the following command to call a custom program:
 
 ```bash
 RUST_LOG=info cargo run -p svm-cli -- -p svm/executor/tests/hello_solana_program.so
@@ -48,7 +48,7 @@ We define all aspects related to rollups using traits combined with generics. Th
 
 ### Layer1
 
-We defined general information derived from Layer 1, including:
+We defined general information that is derived from Layer 1, including:
 
 - Layer1 block head info: `L1Head`
 - Deposit transaction: `DepositTransaction`
