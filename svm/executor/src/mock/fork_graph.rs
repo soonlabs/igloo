@@ -15,7 +15,5 @@ impl ForkGraph for MockForkGraph {
         }
     }
 
-    fn slot_epoch(&self, _slot: Slot) -> Option<Epoch> {
-        Some(0)
-    }
+    
 }
